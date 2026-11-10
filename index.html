@@ -272,6 +272,38 @@ table.sheet{width:100%;min-width:780px;border-collapse:collapse;font-size:13px}
 .cal-h{flex-basis:100%;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--indigo)}
 .cal-edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);flex:1 1 180px;min-width:0}
 .cal-edit .hint{flex-basis:100%}
+
+/* Editor penuh & tambah alat */
+.btn.indigo{background:var(--indigo);border-color:var(--indigo);color:#fff}
+.btn.indigo:hover{background:var(--indigo-2);color:#fff}
+.edit.full{padding-top:14px}
+.ed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));gap:10px 14px;margin:0 14px}
+.ed-grid label,.rn-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);min-width:0}
+.ed-grid input,.ed-grid select,.crow input,.crow select,.rn-form input{width:100%;min-width:0}
+.req::after{content:" *";color:var(--bad)}
+.warn-sn{font-size:11px;color:#92520a;font-weight:500}
+.warn-sn:empty{display:none}
+.ed-hint{margin:0 14px;font-size:12px;color:var(--muted)}
+.ed-hint:empty{display:none}
+.ed-comps-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--indigo)}
+.ed-comps-h span{flex:1 1 auto}
+.ed-comps-h .btn{letter-spacing:0;text-transform:none}
+.ed-comps{margin:0 14px;display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.crow{display:grid;grid-template-columns:minmax(0,1.3fr) 130px minmax(0,1.5fr) 34px;gap:8px;align-items:center}
+.crow .x{border:1px solid var(--line);background:var(--surface);border-radius:6px;height:34px;cursor:pointer;color:var(--muted);font-size:17px;line-height:1}
+.crow .x:hover{color:var(--bad);border-color:var(--bad-line)}
+.new-item{border:1px dashed var(--indigo)}
+.new-h{padding:16px 14px 0;font-weight:700;font-size:16px;color:var(--indigo)}
+.pg-actions{display:flex;flex-wrap:wrap;gap:8px}
+.rn-form{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--indigo-line);background:var(--indigo-soft);border-radius:8px}
+.rn-form input{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px;font-weight:400;color:var(--text)}
+.rn-row{display:flex;flex-wrap:wrap;gap:8px}
+.rn-row input{flex:1 1 120px;width:auto}
+.rn-form .msg,.rn-form .ed-hint{margin:0}
+@media (max-width:620px){
+  .crow{grid-template-columns:minmax(0,1fr) 34px;grid-template-areas:"d x" "s s" "c c";padding-bottom:8px;border-bottom:1px dashed var(--line)}
+  .crow .c-det{grid-area:d}.crow .x{grid-area:x}.crow .c-st{grid-area:s}.crow .c-ct{grid-area:c}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -333,6 +365,7 @@ table.sheet{width:100%;min-width:780px;border-collapse:collapse;font-size:13px}
           <button type="button" data-view="senarai" aria-pressed="true">Senarai</button>
           <button type="button" data-view="jadual" aria-pressed="false">Jadual</button>
         </div>
+        <button id="addItem" class="btn indigo" type="button">+ Tambah Alat</button>
         <button id="exportPdf" class="btn primary" type="button">Export PDF</button>
       </div>
     </div>
@@ -732,8 +765,10 @@ function buildModel(rows, rowNums){
     if(r.every(c=>!String(c??'').trim())) continue;
     const n=cell(r,I.nama), p=cell(r,I.per);
     if(n) nama=n;
+    if(n && !p){ cur=null; continue; }
     if(p){ cur={id:items.length, nama, peralatan:p, sn:cell(r,I.sn), kategori:catOf(p), komponen:[], firstRow:rowNums[i], calRow:rowNums[i], calStatus:'', calDate:''}; items.push(cur); }
     if(!cur) continue;
+    cur.lastRow=rowNums[i];
     { const cs=cell(r,I.calSt), cd=cell(r,I.calTgl);
       if((cs||cd) && !cur.calStatus && !cur.calDate) cur.calRow=rowNums[i];
       if(cs && !cur.calStatus) cur.calStatus=cs;
@@ -827,7 +862,10 @@ function renderSurv(){
         <span class="bar" aria-hidden="true"><i class="g${p===100?' full':''}" style="width:${b/tot*100}%"></i><i class="w" style="width:${k/tot*100}%"></i><i class="b" style="width:${r/tot*100}%"></i></span>
       </div>
       <div class="pg-foot"><span>Tidak baik: <b class="num">${r}</b> · Catatan: <b class="num">${nota}</b>${HAS_CAL?` · Kalibrasi: <b class="num">${its.filter(calNeedsAction).length}</b>`:''}</span><span>Kemaskini: <b>${esc(latestUpd(comps)||'—')}</b></span></div>
-      <button type="button" class="btn sm" data-surv="${esc(n)}" aria-pressed="${sel}">${sel?'Buang tapisan':'Tapis daftar ikut nama ini'}</button>
+      ${RENAMING===n ? renameForm(n) : `<div class="pg-actions">
+        <button type="button" class="btn sm" data-surv="${esc(n)}" aria-pressed="${sel}">${sel?'Buang tapisan':'Tapis daftar'}</button>
+        ${SCRIPT_URL?`<button type="button" class="btn sm" data-pact="add" data-nama="${esc(n)}">+ Tambah alat</button>
+        <button type="button" class="btn sm" data-pact="rename" data-nama="${esc(n)}">Tukar nama</button>`:''}</div>`}
     </article>`;
   }).join('');
 }
@@ -917,51 +955,21 @@ function compView(c){
   return `<li><span class="d">${esc(c.detail)}${c.catatan?`<span class="c">${esc(c.catatan)}</span>`:''}${c.upd?`<span class="u">Kemaskini ${esc(c.upd)}${c.oleh?' · '+esc(c.oleh):''}</span>`:''}</span><span class="pill p-${c.status}">${esc(COMP_LABEL[c.status]||c.raw)}</span></li>`;
 }
 
-function editorView(it){
-  let calEdit='';
-  if(HAS_CAL){
-    const d=parseDMY(it.calDate), iso=d?toISO(d):'';
-    calEdit=`<div class="cal-edit">
-      <span class="cal-h">Kalibrasi alat</span>
-      <label for="kst-${it.id}">Status Kalibrasi<input id="kst-${it.id}" class="e-kst" list="calSuggest" maxlength="40" value="${esc(it.calStatus)}" data-init="${esc(it.calStatus)}"></label>
-      <label for="ktg-${it.id}">Tarikh Kalibrasi<input id="ktg-${it.id}" class="e-ktg" type="date" value="${iso}" data-init="${iso}"></label>
-      ${it.calDate&&!d?`<span class="hint">Nilai asal "${esc(it.calDate)}" bukan format DD/MM/YYYY. Biarkan kosong untuk kekalkan.</span>`:''}
-    </div>`;
-  }
-  return `<div class="edit">${calEdit}
-    <ul class="comps editing">${it.komponen.map((c,i)=>{
-      const cur=statusLabel(c);
-      const opts=(c.status==='kosong'?'<option value="" selected>Tiada rekod</option>':'')
-        + (c.status==='lain'?`<option value="${esc(c.raw)}" selected>${esc(c.raw)}</option>`:'')
-        + STATUS_OPTIONS.map(o=>`<option value="${o}" ${cur===o?'selected':''}>${o}</option>`).join('');
-      return `<li data-i="${i}">
-        <label class="d" for="st-${it.id}-${i}">${esc(c.detail)}</label>
-        <div class="ef">
-          <select id="st-${it.id}-${i}" class="e-st">${opts}</select>
-          <input id="ct-${it.id}-${i}" class="e-ct" type="text" maxlength="200" placeholder="Catatan (pilihan)" value="${esc(c.catatan)}" aria-label="Catatan ${esc(c.detail)}">
-        </div></li>`;
-    }).join('')}</ul>
-    <div class="edit-bar">
-      <button type="button" class="btn sm" data-act="allbaik">Tanda semua Baik</button>
-      <input id="oleh-${it.id}" class="e-oleh" type="text" maxlength="60" placeholder="Nama anda" value="${esc(store.get('inv_oleh'))}" aria-label="Nama anda">
-      <input id="pin-${it.id}" class="e-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" value="${esc(store.get('inv_pin',true))}" aria-label="PIN editor">
-      <span class="spacer"></span>
-      <button type="button" class="btn" data-act="cancel">Batal</button>
-      <button type="button" class="btn primary" data-act="save">Simpan perubahan</button>
-    </div>
-    <p class="msg" role="status" aria-live="polite"></p>
-  </div>`;
-}
-
 const CHEV='<svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 4l6 6-6 6"/></svg>';
 function renderList(){
-  const shown=ITEMS.filter(matches);
+  let keep=null;
+  if(EDITING!==null){ keep=$('#list .edit.full'); if(keep) keep.remove(); }
+  const shown=ITEMS.filter(it=>matches(it)||it.key===EDITING);
   $('#regCount').textContent=`${shown.length} daripada ${ITEMS.length} unit`;
-  if(!shown.length){ $('#cols').hidden=true; $('#list').innerHTML='<div class="empty">Tiada peralatan sepadan dengan tapisan ini. Cuba kosongkan carian atau tukar status.</div>'; return; }
-  $('#cols').hidden = VIEW==='jadual'; $('#toggleAll').hidden = VIEW==='jadual';
-  if(VIEW==='jadual'){ renderTable(shown); return; }
+  $('#cols').hidden = VIEW==='jadual' || !shown.length; $('#toggleAll').hidden = VIEW==='jadual';
+  const EMPTY='<div class="empty">Tiada peralatan sepadan dengan tapisan ini. Cuba kosongkan carian atau tukar status.</div>';
+  if(VIEW==='jadual'){ if(shown.length) renderTable(shown); else $('#list').innerHTML=EMPTY; return; }
+  const slot = make => keep ? '<div class="ed-slot"></div>' : make();
+  let html='';
+  if(EDITING==='__new__') html+=`<div class="item is-edit new-item"><div class="new-h">Tambah alat baru</div>${slot(()=>editorView(null))}</div>`;
+  if(!shown.length) html+=EMPTY;
   const openAll=$('#toggleAll').dataset.open==='1';
-  $('#list').innerHTML=shown.map(it=>{
+  html+=shown.map(it=>{
     const n=it.komponen.length||1;
     const isEdit=EDITING===it.key;
     const open=isEdit||openAll||OPEN.has(it.key)||(F.q&&it.komponen.some(c=>(c.detail+' '+c.catatan).toLowerCase().includes(F.q)));
@@ -975,12 +983,15 @@ function renderList(){
         <div class="c-st"><span class="pill p-${it.state}">${STATE_LABEL[it.state]}</span></div>
         ${CHEV}
       </summary>
-      ${isEdit ? editorView(it) : `<ul class="comps">${it.komponen.map(compView).join('')}</ul>
+      ${isEdit ? slot(()=>editorView(it)) : `<ul class="comps">${it.komponen.map(compView).join('')}</ul>
       <div class="item-act">${SCRIPT_URL
-        ? `<button type="button" class="btn sm" data-act="edit">Edit status alat</button>`
+        ? `<button type="button" class="btn sm" data-act="edit">Edit alat</button>`
         : `<span class="hint">Edit belum aktif. Isi SCRIPT_URL dalam index.html selepas deploy Apps Script.</span>`}</div>`}
     </details>`;
   }).join('');
+  $('#list').innerHTML=html;
+  if(keep){ const sl=$('#list .ed-slot'); if(sl) sl.replaceWith(keep); }
+  else if(EDITING!==null){ const box=$('#list .edit.full'); if(box){ EDIT_INIT.set(EDITING, JSON.stringify(collectEditor(box))); snWarn(box); } }
 }
 
 function fillSelects(){
@@ -991,7 +1002,7 @@ function fillSelects(){
   $('#fSurv').value=people.includes(F.surv)?F.surv:''; $('#fCat').value=cats.includes(F.cat)?F.cat:'';
 }
 
-function renderAll(){ renderKPI(); renderSurv(); renderCats(); renderKal(); renderAttn(); fillSelects(); renderList(); }
+function renderAll(){ renderSuggest(); renderKPI(); renderSurv(); renderCats(); renderKal(); renderAttn(); fillSelects(); renderList(); }
 function renderFiltered(){ renderSurv(); renderCats(); renderList(); $('#fSurv').value=F.surv; $('#fCat').value=F.cat; }
 
 function setSource(kind){
@@ -1039,59 +1050,183 @@ async function load(){
   }
   setSource(source); renderAll(); btn.disabled=false;
   clearInterval(timer);
-  if(source!=='snap') timer=setInterval(()=>{ if(EDITING===null) load(); }, AUTO_REFRESH_MS);
+  if(source!=='snap') timer=setInterval(()=>{ if(!isBusy()) load(); }, AUTO_REFRESH_MS);
 }
 
-/* ===== Simpan edit ===== */
-async function saveItem(it, box, btn){
+/* ===== Editor alat (edit penuh & tambah baru) ===== */
+let RENAMING=null, NEW_PRESET=null, UID=0;
+const EDIT_INIT=new Map();
+const personNames = () => [...new Set(ITEMS.map(i=>i.nama))];
+const isBusy = () => EDITING!==null || RENAMING!==null;
+
+function compRow(c){
+  const u=++UID;
+  c=c||{detailRaw:'',status:'kosong',raw:'',catatan:''};
+  const cur = c.status==='baik'?'Baik' : c.status==='rosak'?'Tidak Baik' : c.status==='lain'?c.raw : '';
+  const vals=['',...STATUS_OPTIONS,...(c.status==='lain'?[c.raw]:[])];
+  const opts=vals.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${v?esc(v):'Tiada rekod'}</option>`).join('');
+  return `<div class="crow">
+    <input id="cd-${u}" class="c-det" maxlength="80" placeholder="Detail komponen" aria-label="Detail komponen" value="${esc(c.detailRaw??'')}">
+    <select id="cs-${u}" class="c-st" aria-label="Status komponen">${opts}</select>
+    <input id="cc-${u}" class="c-ct" maxlength="200" placeholder="Catatan" aria-label="Catatan" value="${esc(c.catatan||'')}">
+    <button type="button" class="x" data-act="delcomp" aria-label="Buang komponen" title="Buang komponen">×</button>
+  </div>`;
+}
+
+function editorView(it){
+  const isNew=!it, u=++UID;
+  const nama = isNew ? (NEW_PRESET&&NEW_PRESET.nama)||'' : it.nama;
+  const d=it?parseDMY(it.calDate):null, iso=d?toISO(d):'';
+  const badDate=!!(it&&it.calDate&&!d);
+  const opts=personNames().map(n=>`<option value="${esc(n)}" ${n===nama?'selected':''}>${esc(n)}</option>`).join('');
+  const comps = isNew ? [null,null,null] : (it.komponen.length?it.komponen:[null]);
+  return `<div class="edit full" data-mode="${isNew?'new':'edit'}">
+    <div class="ed-grid">
+      <label for="fn-${u}"><span class="req">Pemegang</span>
+        <select id="fn-${u}" class="f-nama">${isNew&&!nama?'<option value="" selected disabled>Pilih pemegang</option>':''}${opts}<option value="__baru">+ Pemegang baru…</option></select>
+        <input id="fnb-${u}" class="f-nama-baru" maxlength="60" placeholder="Nama pemegang baru" aria-label="Nama pemegang baru" hidden></label>
+      <label for="fp-${u}"><span class="req">Peralatan</span>
+        <input id="fp-${u}" class="f-per" maxlength="80" list="perSuggest" placeholder="cth. GNSS i90" value="${esc(it?it.peralatan:'')}"></label>
+      <label for="fs-${u}">S/N
+        <input id="fs-${u}" class="f-sn" maxlength="60" value="${esc(it?it.sn:'')}"><span class="warn-sn" aria-live="polite"></span></label>
+      ${HAS_CAL?`<label for="fk-${u}">Status Kalibrasi
+        <input id="fk-${u}" class="f-kst" maxlength="40" list="calSuggest" value="${esc(it?it.calStatus:'')}"></label>
+      <label for="ft-${u}">Tarikh Kalibrasi
+        <input id="ft-${u}" class="f-ktg" type="date" value="${iso}" data-keep="${badDate?'1':''}"></label>`:''}
+    </div>
+    ${badDate?`<p class="ed-hint">Tarikh kalibrasi asal "${esc(it.calDate)}" bukan format DD/MM/YYYY. Biarkan kosong untuk kekalkan nilai asal.</p>`:''}
+    ${!isNew?'<p class="ed-hint">Kalau pemegang ditukar, alat ni akan dipindahkan ke bawah nama pemegang tu dalam sheet.</p>':''}
+    <div class="ed-comps-h"><span>Komponen</span>
+      <button type="button" class="btn sm" data-act="allbaik">Tanda semua Baik</button>
+      <button type="button" class="btn sm" data-act="addcomp">+ Tambah komponen</button></div>
+    <div class="ed-comps">${comps.map(compRow).join('')}</div>
+    <p class="ed-hint tpl" aria-live="polite">${isNew?'Taip nama peralatan yang sama dengan alat sedia ada untuk salin senarai komponennya.':''}</p>
+    <div class="edit-bar">
+      <input id="eo-${u}" class="e-oleh" type="text" maxlength="60" placeholder="Nama anda" value="${esc(store.get('inv_oleh'))}" aria-label="Nama anda">
+      <input id="ep-${u}" class="e-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" value="${esc(store.get('inv_pin',true))}" aria-label="PIN editor">
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-act="cancel">Batal</button>
+      <button type="button" class="btn primary" data-act="save">${isNew?'Tambah alat':'Simpan perubahan'}</button>
+    </div>
+    <p class="msg" role="status" aria-live="polite"></p>
+  </div>`;
+}
+
+function collectEditor(box){
+  const sel=box.querySelector('.f-nama');
+  const nama = sel.value==='__baru' ? box.querySelector('.f-nama-baru').value.trim() : sel.value;
+  const kt=box.querySelector('.f-ktg'), ks=box.querySelector('.f-kst');
+  let calDate=null;
+  if(kt) calDate = (kt.dataset.keep==='1' && !kt.value) ? null : (kt.value ? fmtDate(parseDMY(kt.value)) : '');
+  const komponen=[...box.querySelectorAll('.crow')].map(r=>({
+    detail:r.querySelector('.c-det').value.trim(), status:r.querySelector('.c-st').value, catatan:r.querySelector('.c-ct').value.trim()
+  })).filter(c=>c.detail||c.status||c.catatan);
+  return { nama, peralatan:box.querySelector('.f-per').value.trim(), sn:box.querySelector('.f-sn').value.trim(),
+    calStatus: ks ? ks.value.trim() : null, calDate, komponen };
+}
+
+async function postScript(payload){
+  const res=await fetchTimeout(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)},SAVE_TIMEOUT_MS);
+  const d=await res.json();
+  if(!d.ok) throw new Error(d.error||'Gagal menyimpan.');
+  return d;
+}
+const errMsg = err => err.name==='AbortError' ? 'Sambungan tamat masa. Semak dalam sheet dulu sebelum cuba lagi.'
+  : /fetch|network/i.test(err.message) ? 'Tak dapat sambung ke Apps Script. Semak SCRIPT_URL dan akses Web App (Anyone).'
+  : err.message;
+
+async function saveFull(box, btn){
   const msg=box.querySelector('.msg');
   const say=(t,bad)=>{ msg.textContent=t; msg.className='msg'+(bad?' bad':''); };
-  const oleh=box.querySelector('.e-oleh').value.trim();
-  const pin=box.querySelector('.e-pin').value.trim();
-  const updates=[]; let unpicked=0;
-  box.querySelectorAll('.comps li[data-i]').forEach(li=>{
-    const c=it.komponen[+li.dataset.i];
-    const st=li.querySelector('.e-st').value;
-    const ct=li.querySelector('.e-ct').value.trim();
-    if(st===statusLabel(c) && ct===c.catatan) return;
-    if(!STATUS_OPTIONS.includes(st)){ unpicked++; return; }
-    updates.push({row:c.row, detail:c.detailRaw, status:st, catatan:ct, nama:it.nama, peralatan:it.peralatan, sn:it.sn, _c:c});
-  });
-  if(unpicked) return say(`${unpicked} komponen masih "Tiada rekod". Pilih Baik atau Tidak Baik dulu.`, true);
-  let kal=null;
-  const ks=box.querySelector('.e-kst'), kd=box.querySelector('.e-ktg');
-  if(ks && kd){
-    const stCh=ks.value.trim()!==ks.dataset.init, dtCh=kd.value!==kd.dataset.init;
-    if(stCh||dtCh){
-      const onFirst=it.calRow===it.firstRow, ref=it.komponen.find(c=>c.row===it.calRow);
-      kal={row:it.calRow, peralatan:onFirst?it.peralatan:'', detail:onFirst?'':(ref?ref.detailRaw:''),
-           status:stCh?ks.value.trim():null, tarikh:dtCh?(kd.value?fmtDate(parseDMY(kd.value)):''):null, nama:it.nama, sn:it.sn};
-    }
-  }
-  if(!updates.length && !kal) return say('Tiada perubahan untuk disimpan.');
+  const isNew=box.dataset.mode==='new';
+  const data=collectEditor(box);
+  if(!data.nama) return say('Pilih atau isi nama pemegang.', true);
+  if(!data.peralatan) return say('Isi nama peralatan.', true);
+  if(data.komponen.some(c=>!c.detail)) return say('Setiap komponen yang diisi perlu ada Detail.', true);
+  if(!isNew && JSON.stringify(data)===EDIT_INIT.get(EDITING)) return say('Tiada perubahan untuk disimpan.');
+  const oleh=box.querySelector('.e-oleh').value.trim(), pin=box.querySelector('.e-pin').value.trim();
   if(!oleh) return say('Isi nama anda dulu supaya rekod audit lengkap.', true);
   if(!pin) return say('Isi PIN editor.', true);
 
+  const it = isNew ? null : ITEMS.find(i=>i.key===EDITING);
+  if(!isNew && !it) return say('Alat ni tak dijumpai lagi. Muat semula dashboard.', true);
+  const payload={pin, oleh, action:isNew?'addItem':'saveItem', item:data};
+  if(it) payload.expect={firstRow:it.firstRow, lastRow:it.lastRow, peralatan:it.peralatan,
+    rows:it.komponen.map(c=>({row:c.row, detail:c.detailRaw}))};
+
   btn.disabled=true; say('Menyimpan…');
   try{
-    const res=await fetchTimeout(SCRIPT_URL,{method:'POST',body:JSON.stringify({pin,oleh,updates:updates.map(({_c,...u})=>u),kal})},SAVE_TIMEOUT_MS);
-    const data=await res.json();
-    if(!data.ok) throw new Error(data.error||'Gagal menyimpan.');
+    const res=await postScript(payload);
     store.set('inv_oleh',oleh); store.set('inv_pin',pin,true);
-    for(const u of updates){
-      Object.assign(u._c,{raw:u.status,status:normStatus(u.status),catatan:u.catatan,upd:data.at||fmtTime(new Date()),oleh});
-    }
-    if(kal){ if(kal.status!==null) it.calStatus=kal.status; if(kal.tarikh!==null) it.calDate=kal.tarikh; }
-    computeItem(it); EDITING=null; OPEN.add(it.key);
-    renderAll();
-    toast(`${it.peralatan} (${it.nama}): ${[updates.length?updates.length+' komponen':'',kal?'kalibrasi':''].filter(Boolean).join(' & ')} dikemas kini.`);
-    setTimeout(()=>{ if(EDITING===null) load(); }, 1500);
+    if(it && F.surv===it.nama && data.nama!==it.nama) F.surv=data.nama;
+    EDITING=null; NEW_PRESET=null; EDIT_INIT.clear();
+    toast(isNew ? `${data.peralatan} ditambah di bawah ${data.nama}.` : res.updated===0 ? 'Tiada perubahan.' : `${data.peralatan} (${data.nama}) dikemas kini.`);
+    await load();
   }catch(err){
-    const m = err.name==='AbortError' ? 'Sambungan tamat masa. Semak dalam sheet dulu sebelum cuba lagi.'
-      : /fetch|network/i.test(err.message) ? 'Tak dapat sambung ke Apps Script. Semak SCRIPT_URL dan akses Web App (Anyone).'
-      : err.message;
-    say(m,true); btn.disabled=false;
+    say(errMsg(err), true); btn.disabled=false;
   }
+}
+
+function startNew(nama){
+  if(!SCRIPT_URL) return;
+  if(EDITING!==null && EDITING!=='__new__'){ toast('Simpan atau batal edit yang sedang dibuka dulu.'); return; }
+  EDITING='__new__'; NEW_PRESET={nama:nama||''}; EDIT_INIT.clear();
+  if(VIEW!=='senarai'){ VIEW='senarai'; store.set('inv_view','senarai'); document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view==='senarai'))); }
+  $('#list .edit.full')?.remove();
+  renderList();
+  const el=$('#list .new-item');
+  if(!el) return;
+  el.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  el.querySelector(nama?'.f-per':'.f-nama')?.focus({preventScroll:true});
+}
+
+function snWarn(box){
+  const v=box.querySelector('.f-sn').value.trim().toUpperCase();
+  const self=box.dataset.mode==='edit'?EDITING:null;
+  const hit=v && ITEMS.find(i=>i.key!==self && i.sn && i.sn.toUpperCase()===v);
+  box.querySelector('.warn-sn').textContent = hit ? `S/N ni dah ada pada ${hit.peralatan} (${hit.nama}).` : '';
+}
+
+function renderSuggest(){
+  let dl=$('#perSuggest');
+  if(!dl){ dl=document.createElement('datalist'); dl.id='perSuggest'; document.body.appendChild(dl); }
+  dl.innerHTML=[...new Set(ITEMS.map(i=>i.peralatan))].sort().map(v=>`<option value="${esc(v)}">`).join('');
+}
+
+function renameForm(n){
+  const u=++UID;
+  return `<div class="rn-form" data-nama="${esc(n)}">
+    <label for="rn-${u}">Nama baru untuk ${esc(n)}<input id="rn-${u}" class="rn-to" maxlength="60" value="${esc(n)}"></label>
+    <div class="rn-row">
+      <input id="ro-${u}" class="rn-oleh" maxlength="60" placeholder="Nama anda" value="${esc(store.get('inv_oleh'))}" aria-label="Nama anda">
+      <input id="rp-${u}" class="rn-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" value="${esc(store.get('inv_pin',true))}" aria-label="PIN editor">
+    </div>
+    <p class="ed-hint">Semua sel Nama "${esc(n)}" dalam sheet akan ditukar.</p>
+    <div class="rn-row"><button type="button" class="btn sm" data-pact="rcancel">Batal</button><button type="button" class="btn sm primary" data-pact="rsave">Simpan nama</button></div>
+    <p class="msg" role="status" aria-live="polite"></p>
+  </div>`;
+}
+
+async function renamePerson(form, btn){
+  const msg=form.querySelector('.msg');
+  const say=(t,bad)=>{ msg.textContent=t; msg.className='msg'+(bad?' bad':''); };
+  const from=form.dataset.nama, to=form.querySelector('.rn-to').value.trim();
+  const oleh=form.querySelector('.rn-oleh').value.trim(), pin=form.querySelector('.rn-pin').value.trim();
+  if(!to || to===from) return say('Isi nama baru yang berbeza.', true);
+  if(!oleh) return say('Isi nama anda dulu.', true);
+  if(!pin) return say('Isi PIN editor.', true);
+  if(personNames().includes(to) && form.dataset.confirm!==to){
+    form.dataset.confirm=to;
+    return say(`"${to}" dah wujud. Tekan Simpan sekali lagi untuk gabungkan semua alat ${from} di bawah ${to}.`, true);
+  }
+  btn.disabled=true; say('Menyimpan…');
+  try{
+    await postScript({pin, oleh, action:'renamePerson', from, to});
+    store.set('inv_oleh',oleh); store.set('inv_pin',pin,true);
+    RENAMING=null; if(F.surv===from) F.surv=to;
+    toast(`${from} ditukar kepada ${to}.`);
+    await load();
+  }catch(err){ say(errMsg(err), true); btn.disabled=false; }
 }
 
 /* ===== Paparan jadual & Export PDF ===== */
@@ -1111,16 +1246,16 @@ const calDueText = it => it.cal && it.cal.due ? (it.cal.state==='tamat' ? 'Tamat
 
 function renderTable(items){
   const showUpd=items.some(it=>it.komponen.some(c=>c.upd));
-  const span={};
-  for(const it of items) span[it.nama]=(span[it.nama]||0)+Math.max(it.komponen.length,1);
+  const runSpan={};
+  for(let a=0;a<items.length;){ let b=a, rows=0; while(b<items.length && items[b].nama===items[a].nama){ rows+=Math.max(items[b].komponen.length,1); b++; } runSpan[items[a].id]=rows; a=b; }
   let html=`<div class="tbl-wrap"><table class="sheet"><thead><tr><th>Nama</th><th>Peralatan</th><th>S/N</th><th>Detail</th>${HAS_CAL?'<th>Status Kalibrasi</th><th>Tarikh Kalibrasi</th>':''}<th>Status</th><th>Catatan</th>${showUpd?'<th>Kemaskini</th>':''}</tr></thead><tbody>`;
   let prev=null;
   for(const it of items){
     const comps=it.komponen.length?it.komponen:[null], n=comps.length;
-    const newPerson=it.nama!==prev; prev=it.nama;
+    const newPerson=runSpan[it.id]!==undefined;
     comps.forEach((c,i)=>{
       html+=`<tr class="${i===0?'grp':''}${i===0&&newPerson?' person':''}">`;
-      if(i===0&&newPerson) html+=`<td rowspan="${span[it.nama]}" class="nm">${esc(it.nama)}</td>`;
+      if(i===0&&newPerson) html+=`<td rowspan="${runSpan[it.id]}" class="nm">${esc(it.nama)}</td>`;
       if(i===0) html+=`<td rowspan="${n}" class="eqc"><button type="button" class="lnk" data-goto="${it.id}" title="Buka dalam paparan senarai">${esc(it.peralatan)}</button></td><td rowspan="${n}" class="snc">${it.sn?esc(it.sn):'<span class="mut">-</span>'}</td>`;
       html+=`<td>${c?esc(c.detail):'<span class="mut">Tiada komponen direkod</span>'}</td>`;
       if(HAS_CAL && i===0){
@@ -1290,10 +1425,18 @@ $('#q').addEventListener('input',e=>{F.q=e.target.value.trim().toLowerCase(); re
 $('#fSurv').addEventListener('change',e=>{F.surv=e.target.value; renderFiltered();});
 $('#fCat').addEventListener('change',e=>{F.cat=e.target.value; renderFiltered();});
 $('#fSt').addEventListener('change',e=>{F.st=e.target.value; renderList();});
-$('#pg').addEventListener('click',e=>{const g=e.target.closest('[data-goto]'); if(g){ goTo(+g.dataset.goto); return; } const b=e.target.closest('[data-surv]'); if(!b) return; F.surv=F.surv===b.dataset.surv?'':b.dataset.surv; renderFiltered(); if(F.surv) document.querySelector('#list')?.scrollIntoView({behavior:'smooth',block:'start'});});
+$('#pg').addEventListener('click',e=>{const g=e.target.closest('[data-goto]'); if(g){ goTo(+g.dataset.goto); return; }
+  const a=e.target.closest('[data-pact]');
+  if(a){ const act=a.dataset.pact;
+    if(act==='add'){ startNew(a.dataset.nama); return; }
+    if(act==='rename'){ if(RENAMING!==null||EDITING!==null){ toast('Simpan atau batal edit yang sedang dibuka dulu.'); return; } RENAMING=a.dataset.nama; renderSurv(); const t=$('#pg .rn-to'); if(t){ t.focus(); t.select(); } return; }
+    if(act==='rcancel'){ RENAMING=null; renderSurv(); return; }
+    if(act==='rsave'){ renamePerson(a.closest('.rn-form'),a); return; }
+  }
+  const b=e.target.closest('[data-surv]'); if(!b) return; F.surv=F.surv===b.dataset.surv?'':b.dataset.surv; renderFiltered(); if(F.surv) document.querySelector('#list')?.scrollIntoView({behavior:'smooth',block:'start'});});
 $('#cats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]'); if(!b) return; F.cat=F.cat===b.dataset.cat?'':b.dataset.cat; renderFiltered();});
 $('#toggleAll').addEventListener('click',e=>{const o=e.target.dataset.open==='1'; e.target.dataset.open=o?'0':'1'; e.target.textContent=o?'Buka semua':'Tutup semua'; if(o) OPEN.clear(); renderList();});
-$('#refresh').addEventListener('click',()=>{ if(EDITING===null) load(); else toast('Simpan atau batal edit dulu sebelum muat semula.'); });
+$('#refresh').addEventListener('click',()=>{ if(!isBusy()) load(); else toast('Simpan atau batal edit dulu sebelum muat semula.'); });
 
 $('#list').addEventListener('toggle',e=>{
   const d=e.target; if(!d.classList||!d.classList.contains('item')) return;
@@ -1304,23 +1447,45 @@ $('#list').addEventListener('toggle',e=>{
 $('#list').addEventListener('click',e=>{
   const g=e.target.closest('[data-goto]'); if(g){ goTo(+g.dataset.goto); return; }
   const b=e.target.closest('[data-act]'); if(!b) return;
-  const box=b.closest('.item'); const it=ITEMS[+box.dataset.id]; if(!it) return;
+  const box=b.closest('.edit.full'), item=b.closest('.item');
   switch(b.dataset.act){
-    case 'edit':
+    case 'edit': {
+      const it=item&&ITEMS[+item.dataset.id]; if(!it) return;
+      if(isBusy()){ toast('Simpan atau batal edit yang sedang dibuka dulu.'); return; }
       EDITING=it.key; OPEN.add(it.key); renderList();
-      document.querySelector(`.item[data-id="${it.id}"] .e-st`)?.focus();
+      document.querySelector(`.item[data-id="${it.id}"] .f-per`)?.focus();
       break;
-    case 'cancel': EDITING=null; renderList(); break;
-    case 'allbaik': box.querySelectorAll('.e-st').forEach(s=>{ s.value='Baik'; }); break;
-    case 'save': saveItem(it,box,b); break;
+    }
+    case 'cancel': EDITING=null; NEW_PRESET=null; EDIT_INIT.clear(); renderList(); break;
+    case 'allbaik': box.querySelectorAll('.crow').forEach(r=>{ if(r.querySelector('.c-det').value.trim()) r.querySelector('.c-st').value='Baik'; }); break;
+    case 'addcomp': box.querySelector('.ed-comps').insertAdjacentHTML('beforeend',compRow()); box.querySelector('.ed-comps .crow:last-child .c-det').focus(); break;
+    case 'delcomp': b.closest('.crow').remove(); break;
+    case 'save': saveFull(box,b); break;
   }
 });
+$('#list').addEventListener('change',e=>{
+  const t=e.target, box=t.closest('.edit.full'); if(!box) return;
+  if(t.classList.contains('f-nama')){
+    const nb=box.querySelector('.f-nama-baru'); nb.hidden=t.value!=='__baru'; if(!nb.hidden) nb.focus();
+  }
+  if(t.classList.contains('f-per') && box.dataset.mode==='new'){
+    if([...box.querySelectorAll('.c-det')].some(i=>i.value.trim())) return;
+    const v=t.value.trim().toLowerCase();
+    const src=ITEMS.find(i=>i.peralatan.toLowerCase()===v && i.komponen.some(c=>c.detailRaw));
+    if(!src) return;
+    box.querySelector('.ed-comps').innerHTML=src.komponen.filter(c=>c.detailRaw).map(c=>compRow({detailRaw:c.detailRaw,status:'kosong',raw:'',catatan:''})).join('');
+    box.querySelector('.tpl').textContent=`Senarai komponen disalin dari ${src.peralatan} (${src.nama}). Tetapkan status setiap komponen.`;
+  }
+});
+$('#list').addEventListener('input',e=>{ if(e.target.classList.contains('f-sn')) snWarn(e.target.closest('.edit.full')); });
 
 document.querySelectorAll('[data-view]').forEach(b=>{
   b.setAttribute('aria-pressed',String(b.dataset.view===VIEW));
-  b.addEventListener('click',()=>{ if(EDITING!==null){ toast('Simpan atau batal edit dulu.'); return; } setView(b.dataset.view); });
+  b.addEventListener('click',()=>{ if(isBusy()){ toast('Simpan atau batal edit dulu.'); return; } setView(b.dataset.view); });
 });
 $('#exportPdf').addEventListener('click',exportPDF);
+if(!SCRIPT_URL) $('#addItem').hidden=true;
+$('#addItem').addEventListener('click',()=>startNew(F.surv||''));
 $('#kal').addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) goTo(+g.dataset.goto); });
 { const dl=document.createElement('datalist'); dl.id='calSuggest'; dl.innerHTML=CAL_STATUS_SUGGEST.map(v=>`<option value="${v}">`).join(''); document.body.appendChild(dl); }
 
