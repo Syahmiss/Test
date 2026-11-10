@@ -232,6 +232,46 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .pg [data-surv]{align-self:flex-start}
 .item{scroll-margin-top:16px}
 .item.flash{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-soft)}
+
+/* Jadual & export */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:8px 12px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--indigo);color:#fff}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table.sheet{width:100%;min-width:780px;border-collapse:collapse;font-size:13px}
+.sheet th{background:var(--indigo);color:#fff;text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:10px 12px;white-space:nowrap}
+.sheet td{padding:7px 12px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top}
+.sheet td:last-child{border-right:0}
+.sheet tr.grp td{border-top:1px solid #cfd2e0}
+.sheet tr.person td{border-top:2px solid var(--indigo-line)}
+.sheet tbody tr.person:first-child td{border-top:0}
+.sheet .nm{font-weight:700;background:var(--surface-2)}
+.sheet .eqc,.sheet .snc{background:var(--surface-2)}
+.sheet .snc{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.sheet .mut{color:var(--muted)}
+.sheet .pill{font-size:11px;padding:1px 8px}
+.lnk{background:none;border:0;padding:0;font-weight:600;color:var(--text);cursor:pointer;text-align:left}
+.lnk:hover{color:var(--indigo);text-decoration:underline}
+@media (max-width:860px){.seg{flex:1 1 auto}.seg button{flex:1}#exportPdf{flex:1 1 auto}}
+
+/* Kalibrasi */
+.grid3{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}
+.grid3 .attn-panel{grid-column:auto}
+.item .cal{display:block;margin-top:4px}
+.item .cal .pill{font-size:11px;padding:1px 8px}
+.calwarn{color:#b42328;font-weight:600}
+.kal-stats{display:flex;flex-wrap:wrap;gap:6px}
+.kal li{display:block;padding:0}
+.kal li button{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border:0;background:none;text-align:left;cursor:pointer}
+.kal li button:hover{background:var(--surface)}
+.kal .t{display:block;font-size:13px;font-weight:600}
+.kal .s{display:block;font-size:12px;color:var(--muted)}
+.kal-empty{padding:12px;color:var(--muted);font-size:13px}
+.cal-d{display:block;font-size:11px;color:var(--muted)}
+.cal-edit{margin:0 14px;padding:12px 14px;border:1px solid var(--indigo-line);background:var(--indigo-soft);border-radius:8px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.cal-h{flex-basis:100%;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--indigo)}
+.cal-edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);flex:1 1 180px;min-width:0}
+.cal-edit .hint{flex-basis:100%}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -260,6 +300,12 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
       <div class="cats" id="cats"></div>
       <div class="legend"><span><i style="background:var(--indigo)"></i>Unit sihat</span><span><i style="background:var(--bad)"></i>Unit ada kerosakan</span></div>
     </div>
+    <div class="panel" id="kalPanel" hidden>
+      <h2>Status Kalibrasi <small id="kalSub"></small></h2>
+      <div class="kal-stats" id="kalStats"></div>
+      <ul class="attn kal" id="kal"></ul>
+      <div class="checks" id="kalNote"></div>
+    </div>
     <div class="panel attn-panel">
       <h2>Perlu Perhatian <small id="attnSub"></small></h2>
       <ul class="attn" id="attn"></ul>
@@ -280,12 +326,18 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
           <option value="semak">Belum lengkap</option>
           <option value="nota">Bernota</option>
           <option value="baik">Baik</option>
+          <option value="kal">Kalibrasi tamat / hampir</option>
         </select>
         <button id="toggleAll" class="btn" type="button">Buka semua</button>
+        <div class="seg" role="group" aria-label="Paparan">
+          <button type="button" data-view="senarai" aria-pressed="true">Senarai</button>
+          <button type="button" data-view="jadual" aria-pressed="false">Jadual</button>
+        </div>
+        <button id="exportPdf" class="btn primary" type="button">Export PDF</button>
       </div>
     </div>
     <div>
-      <div class="cols"><span>Peralatan</span><span>Pemegang</span><span>S/N</span><span>Komponen</span><span>Status</span><span></span></div>
+      <div class="cols" id="cols"><span>Peralatan</span><span>Pemegang</span><span>S/N</span><span>Komponen</span><span>Status</span><span></span></div>
       <div class="list" id="list"></div>
     </div>
   </section>
@@ -574,6 +626,11 @@ const FETCH_TIMEOUT_MS = 10000;
 const SAVE_TIMEOUT_MS = 25000;
 const SNAPSHOT_DATE = '10/11/2026';
 const STATUS_OPTIONS = ['Baik', 'Tidak Baik'];
+// Kalibrasi: Tarikh Kalibrasi dianggap tarikh TERAKHIR dikalibrasi, sah selama CAL_VALID_MONTHS.
+// Kalau lajur tu sebenarnya tarikh TAMAT, tukar CAL_VALID_MONTHS kepada 0.
+const CAL_VALID_MONTHS = 12;
+const CAL_WARN_DAYS = 30;
+const CAL_STATUS_SUGGEST = ['Sah', 'Tamat', 'Dalam kalibrasi', 'Tidak perlu'];
 
 const CATEGORIES = [
   ['GNSS', /gnss/i],
@@ -628,6 +685,34 @@ function normStatus(s){
   return 'lain';
 }
 const statusLabel = c => c.status==='baik' ? 'Baik' : c.status==='rosak' ? 'Tidak Baik' : c.raw;
+let HAS_CAL=false;
+function parseDMY(s){
+  s=String(s||'').trim(); let m=/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/.exec(s);
+  if(m){ const d=new Date(+m[3],m[2]-1,+m[1]); return d.getDate()===+m[1]&&d.getMonth()===m[2]-1?d:null; }
+  m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if(m){ const d=new Date(+m[1],m[2]-1,+m[3]); return isNaN(d)?null:d; }
+  return null;
+}
+const fmtDate = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+const toISO = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+function addMonths(d,n){ const r=new Date(d.getFullYear(),d.getMonth()+n,d.getDate()); if(r.getDate()!==d.getDate()) r.setDate(0); return r; }
+const CAL_PILL={tamat:'rosak',hampir:'semak',sah:'baik',proses:'lain',na:'lain',lain:'lain'};
+function calInfo(it){
+  if(!it.calStatus && !it.calDate) return null;
+  const d=parseDMY(it.calDate); let due=null, days=null;
+  if(d){ due=CAL_VALID_MONTHS?addMonths(d,CAL_VALID_MONTHS):d; const t=new Date(); t.setHours(0,0,0,0); days=Math.round((due-t)/86400000); }
+  const s=(it.calStatus||'').toLowerCase();
+  let state;
+  if(/tamat|luput|expired|tidak\s*sah|gagal/.test(s) || (days!==null&&days<0)) state='tamat';
+  else if(/tidak\s*perlu|\bn\/a\b/.test(s)) state='na';
+  else if(/dalam|hantar|proses|pending/.test(s)) state='proses';
+  else if(days!==null && days<=CAL_WARN_DAYS) state='hampir';
+  else if(days!==null || /sah|lulus|valid|ok|aktif/.test(s)) state='sah';
+  else state='lain';
+  const label = state==='tamat'?'Tamat' : state==='hampir'?`Tamat dalam ${days} hari` : state==='sah'?'Sah' : (it.calStatus||'-');
+  return {state,due,days,label,date:d};
+}
+const calNeedsAction = it => !!(it.cal && (it.cal.state==='tamat'||it.cal.state==='hampir'));
 const catOf = name => (CATEGORIES.find(([,re])=>re.test(name))||[CAT_OTHER])[0];
 
 /* Sheet guna gaya "merged": Nama & Peralatan hanya diisi pada baris pertama.
@@ -637,7 +722,8 @@ function buildModel(rows, rowNums){
   const head=rows[0].map(h=>String(h).trim().toLowerCase());
   const idx=k=>head.indexOf(k);
   const I={nama:idx('nama'),per:idx('peralatan'),sn:idx('s/n'),det:idx('detail'),st:idx('status'),cat:idx('catatan'),
-           upd:idx('kemaskini terakhir'),oleh:idx('dikemaskini oleh')};
+           upd:idx('kemaskini terakhir'),oleh:idx('dikemaskini oleh'),calSt:idx('status kalibrasi'),calTgl:idx('tarikh kalibrasi')};
+  HAS_CAL = I.calSt>=0 || I.calTgl>=0;
   if(I.nama<0||I.per<0) throw new Error('Header Nama/Peralatan tidak dijumpai');
   const cell=(r,i)=>i<0?'':String(r[i]??'').trim();
   const items=[]; let nama='', cur=null;
@@ -646,8 +732,12 @@ function buildModel(rows, rowNums){
     if(r.every(c=>!String(c??'').trim())) continue;
     const n=cell(r,I.nama), p=cell(r,I.per);
     if(n) nama=n;
-    if(p){ cur={id:items.length, nama, peralatan:p, sn:cell(r,I.sn), kategori:catOf(p), komponen:[]}; items.push(cur); }
+    if(p){ cur={id:items.length, nama, peralatan:p, sn:cell(r,I.sn), kategori:catOf(p), komponen:[], firstRow:rowNums[i], calRow:rowNums[i], calStatus:'', calDate:''}; items.push(cur); }
     if(!cur) continue;
+    { const cs=cell(r,I.calSt), cd=cell(r,I.calTgl);
+      if((cs||cd) && !cur.calStatus && !cur.calDate) cur.calRow=rowNums[i];
+      if(cs && !cur.calStatus) cur.calStatus=cs;
+      if(cd && !cur.calDate) cur.calDate=cd; }
     const det=cell(r,I.det), st=cell(r,I.st), ct=cell(r,I.cat);
     if(det||st||ct) cur.komponen.push({row:rowNums[i], detailRaw:det, detail:det||'—', raw:st, status:normStatus(st),
       catatan:ct, upd:cell(r,I.upd), oleh:cell(r,I.oleh)});
@@ -663,6 +753,7 @@ function computeItem(it){
   it.baik=k.filter(c=>c.status==='baik').length;
   it.nota=k.filter(c=>c.catatan).length;
   it.state = it.rosak ? 'rosak' : it.kosong ? 'semak' : 'baik';
+  it.cal = calInfo(it);
 }
 function markDups(items){
   const cnt={};
@@ -728,14 +819,14 @@ function renderSurv(){
           : `<span class="ec">${it.baik}/${nn} baik</span>`;
         return `<li><button type="button" data-goto="${it.id}" title="Buka dalam Daftar Peralatan">
           <span class="sd ${it.state}" role="img" aria-label="${STATE_LABEL[it.state]}"></span>
-          <span class="en">${esc(it.peralatan)}<span class="es">${it.sn?esc(it.sn):'Tiada S/N'} · ${esc(it.kategori)}${it.dup?' · S/N berulang':''}</span></span>${ec}</button></li>`;
+          <span class="en">${esc(it.peralatan)}<span class="es">${it.sn?esc(it.sn):'Tiada S/N'} · ${esc(it.kategori)}${it.dup?' · S/N berulang':''}${calNeedsAction(it)?` · <span class="calwarn">Kalibrasi ${esc(it.cal.label.toLowerCase())}</span>`:''}</span></span>${ec}</button></li>`;
       }).join('')}</ul>
       <div class="lbl-row"><span>Status komponen</span><b class="num">${p}%</b></div>
       <div class="prog">
         <div class="prog-top"><span class="pt-l">Komponen baik</span><span class="pt-r num">Baik: <b>${b}</b> / ${comps.length}</span></div>
         <span class="bar" aria-hidden="true"><i class="g${p===100?' full':''}" style="width:${b/tot*100}%"></i><i class="w" style="width:${k/tot*100}%"></i><i class="b" style="width:${r/tot*100}%"></i></span>
       </div>
-      <div class="pg-foot"><span>Tidak baik: <b class="num">${r}</b> · Catatan: <b class="num">${nota}</b></span><span>Kemaskini: <b>${esc(latestUpd(comps)||'—')}</b></span></div>
+      <div class="pg-foot"><span>Tidak baik: <b class="num">${r}</b> · Catatan: <b class="num">${nota}</b>${HAS_CAL?` · Kalibrasi: <b class="num">${its.filter(calNeedsAction).length}</b>`:''}</span><span>Kemaskini: <b>${esc(latestUpd(comps)||'—')}</b></span></div>
       <button type="button" class="btn sm" data-surv="${esc(n)}" aria-pressed="${sel}">${sel?'Buang tapisan':'Tapis daftar ikut nama ini'}</button>
     </article>`;
   }).join('');
@@ -745,7 +836,8 @@ function goTo(id){
   const it=ITEMS[id]; if(!it) return;
   if(EDITING!==null && EDITING!==it.key){ toast('Simpan atau batal edit dulu.'); return; }
   Object.assign(F,{surv:it.nama,cat:'',st:'',q:''}); $('#q').value=''; $('#fSt').value='';
-  OPEN.add(it.key); renderFiltered();
+  OPEN.add(it.key); if(VIEW!=='senarai'){ VIEW='senarai'; store.set('inv_view','senarai'); document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view==='senarai'))); }
+  renderFiltered();
   const el=document.querySelector(`.item[data-id="${id}"]`); if(!el) return;
   const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   el.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
@@ -795,13 +887,27 @@ function renderAttn(){
   $('#checks').innerHTML=checks.join('');
 }
 
+function renderKal(){
+  $('#kalPanel').hidden=!HAS_CAL; if(!HAS_CAL) return;
+  const rank={tamat:0,hampir:1,proses:2,lain:3,sah:4,na:5};
+  const list=ITEMS.filter(i=>i.cal).sort((a,b)=>rank[a.cal.state]-rank[b.cal.state] || (a.cal.days??1e9)-(b.cal.days??1e9));
+  const cnt=st=>list.filter(i=>i.cal.state===st).length;
+  const need=ITEMS.filter(i=>!i.cal && (i.kategori==='GNSS'||i.kategori==='Total Station'));
+  $('#kalSub').textContent=`${list.length} unit direkod`;
+  $('#kalStats').innerHTML=`<span class="pill p-rosak">${cnt('tamat')} tamat</span><span class="pill p-semak">${cnt('hampir')} hampir tamat</span><span class="pill p-baik">${cnt('sah')} sah</span>`;
+  $('#kal').innerHTML = list.length ? list.map(it=>`<li><button type="button" data-goto="${it.id}"><span class="pill p-${CAL_PILL[it.cal.state]}">${esc(it.cal.label)}</span><span><span class="t">${esc(it.peralatan)}</span><span class="s">${esc(it.nama)}${it.sn?' · '+esc(it.sn):''}${it.calDate?' · Kalibrasi '+esc(it.calDate):''}${it.cal.due?' · '+(it.cal.state==='tamat'?'tamat ':'sah hingga ')+fmtDate(it.cal.due):''}</span></span></button></li>`).join('')
+    : '<li class="kal-empty">Belum ada data kalibrasi dalam sheet. Isi lajur Status Kalibrasi dan Tarikh Kalibrasi pada baris pertama setiap alat.</li>';
+  $('#kalNote').innerHTML = need.length ? `<div class="chk"><div><p>${need.length} unit GNSS / Total Station tiada rekod kalibrasi</p><p class="s">${need.map(i=>esc(i.peralatan)+' – '+esc(i.nama)).join('; ')}</p></div></div>` : '';
+}
+
 function matches(it){
   if(F.surv && it.nama!==F.surv) return false;
   if(F.cat && it.kategori!==F.cat) return false;
   if(F.st==='nota'){ if(!it.nota) return false; }
+  else if(F.st==='kal'){ if(!calNeedsAction(it)) return false; }
   else if(F.st && it.state!==F.st) return false;
   if(F.q){
-    const hay=[it.nama,it.peralatan,it.sn,it.kategori,...it.komponen.flatMap(c=>[c.detail,c.catatan,c.raw])].join(' ').toLowerCase();
+    const hay=[it.nama,it.peralatan,it.sn,it.kategori,it.calStatus,it.calDate,...it.komponen.flatMap(c=>[c.detail,c.catatan,c.raw])].join(' ').toLowerCase();
     if(!F.q.split(/\s+/).every(w=>hay.includes(w))) return false;
   }
   return true;
@@ -812,7 +918,17 @@ function compView(c){
 }
 
 function editorView(it){
-  return `<div class="edit">
+  let calEdit='';
+  if(HAS_CAL){
+    const d=parseDMY(it.calDate), iso=d?toISO(d):'';
+    calEdit=`<div class="cal-edit">
+      <span class="cal-h">Kalibrasi alat</span>
+      <label for="kst-${it.id}">Status Kalibrasi<input id="kst-${it.id}" class="e-kst" list="calSuggest" maxlength="40" value="${esc(it.calStatus)}" data-init="${esc(it.calStatus)}"></label>
+      <label for="ktg-${it.id}">Tarikh Kalibrasi<input id="ktg-${it.id}" class="e-ktg" type="date" value="${iso}" data-init="${iso}"></label>
+      ${it.calDate&&!d?`<span class="hint">Nilai asal "${esc(it.calDate)}" bukan format DD/MM/YYYY. Biarkan kosong untuk kekalkan.</span>`:''}
+    </div>`;
+  }
+  return `<div class="edit">${calEdit}
     <ul class="comps editing">${it.komponen.map((c,i)=>{
       const cur=statusLabel(c);
       const opts=(c.status==='kosong'?'<option value="" selected>Tiada rekod</option>':'')
@@ -841,7 +957,9 @@ const CHEV='<svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentCol
 function renderList(){
   const shown=ITEMS.filter(matches);
   $('#regCount').textContent=`${shown.length} daripada ${ITEMS.length} unit`;
-  if(!shown.length){ $('#list').innerHTML='<div class="empty">Tiada peralatan sepadan dengan tapisan ini. Cuba kosongkan carian atau tukar status.</div>'; return; }
+  if(!shown.length){ $('#cols').hidden=true; $('#list').innerHTML='<div class="empty">Tiada peralatan sepadan dengan tapisan ini. Cuba kosongkan carian atau tukar status.</div>'; return; }
+  $('#cols').hidden = VIEW==='jadual'; $('#toggleAll').hidden = VIEW==='jadual';
+  if(VIEW==='jadual'){ renderTable(shown); return; }
   const openAll=$('#toggleAll').dataset.open==='1';
   $('#list').innerHTML=shown.map(it=>{
     const n=it.komponen.length||1;
@@ -851,7 +969,7 @@ function renderList(){
       <summary>
         <div class="c-eq"><div class="eq">${esc(it.peralatan)}</div><div class="kt">${esc(it.kategori)}</div></div>
         <div class="c-sv">${esc(it.nama)}</div>
-        <div class="c-sn">${it.sn?`<span class="sn">${esc(it.sn)}${it.dup?'<span class="dup">S/N berulang</span>':''}</span>`:'<span class="sn none">Tiada S/N</span>'}</div>
+        <div class="c-sn">${it.sn?`<span class="sn">${esc(it.sn)}${it.dup?'<span class="dup">S/N berulang</span>':''}</span>`:'<span class="sn none">Tiada S/N</span>'}${it.cal?`<span class="cal"><span class="pill p-${CAL_PILL[it.cal.state]}">Kal: ${esc(it.cal.label)}</span></span>`:''}</div>
         <div class="c-cm cmp"><span class="num">${it.baik}/${it.komponen.length} baik${it.nota?` · ${it.nota} catatan`:''}</span>
           <span class="bar" aria-hidden="true"><i class="g" style="width:${it.baik/n*100}%"></i><i class="w" style="width:${(it.komponen.length-it.baik-it.rosak)/n*100}%"></i><i class="b" style="width:${it.rosak/n*100}%"></i></span></div>
         <div class="c-st"><span class="pill p-${it.state}">${STATE_LABEL[it.state]}</span></div>
@@ -873,7 +991,7 @@ function fillSelects(){
   $('#fSurv').value=people.includes(F.surv)?F.surv:''; $('#fCat').value=cats.includes(F.cat)?F.cat:'';
 }
 
-function renderAll(){ renderKPI(); renderSurv(); renderCats(); renderAttn(); fillSelects(); renderList(); }
+function renderAll(){ renderKPI(); renderSurv(); renderCats(); renderKal(); renderAttn(); fillSelects(); renderList(); }
 function renderFiltered(){ renderSurv(); renderCats(); renderList(); $('#fSurv').value=F.surv; $('#fCat').value=F.cat; }
 
 function setSource(kind){
@@ -940,28 +1058,230 @@ async function saveItem(it, box, btn){
     updates.push({row:c.row, detail:c.detailRaw, status:st, catatan:ct, nama:it.nama, peralatan:it.peralatan, sn:it.sn, _c:c});
   });
   if(unpicked) return say(`${unpicked} komponen masih "Tiada rekod". Pilih Baik atau Tidak Baik dulu.`, true);
-  if(!updates.length) return say('Tiada perubahan untuk disimpan.');
+  let kal=null;
+  const ks=box.querySelector('.e-kst'), kd=box.querySelector('.e-ktg');
+  if(ks && kd){
+    const stCh=ks.value.trim()!==ks.dataset.init, dtCh=kd.value!==kd.dataset.init;
+    if(stCh||dtCh){
+      const onFirst=it.calRow===it.firstRow, ref=it.komponen.find(c=>c.row===it.calRow);
+      kal={row:it.calRow, peralatan:onFirst?it.peralatan:'', detail:onFirst?'':(ref?ref.detailRaw:''),
+           status:stCh?ks.value.trim():null, tarikh:dtCh?(kd.value?fmtDate(parseDMY(kd.value)):''):null, nama:it.nama, sn:it.sn};
+    }
+  }
+  if(!updates.length && !kal) return say('Tiada perubahan untuk disimpan.');
   if(!oleh) return say('Isi nama anda dulu supaya rekod audit lengkap.', true);
   if(!pin) return say('Isi PIN editor.', true);
 
-  btn.disabled=true; say(`Menyimpan ${updates.length} perubahan…`);
+  btn.disabled=true; say('Menyimpan…');
   try{
-    const res=await fetchTimeout(SCRIPT_URL,{method:'POST',body:JSON.stringify({pin,oleh,updates:updates.map(({_c,...u})=>u)})},SAVE_TIMEOUT_MS);
+    const res=await fetchTimeout(SCRIPT_URL,{method:'POST',body:JSON.stringify({pin,oleh,updates:updates.map(({_c,...u})=>u),kal})},SAVE_TIMEOUT_MS);
     const data=await res.json();
     if(!data.ok) throw new Error(data.error||'Gagal menyimpan.');
     store.set('inv_oleh',oleh); store.set('inv_pin',pin,true);
     for(const u of updates){
       Object.assign(u._c,{raw:u.status,status:normStatus(u.status),catatan:u.catatan,upd:data.at||fmtTime(new Date()),oleh});
     }
+    if(kal){ if(kal.status!==null) it.calStatus=kal.status; if(kal.tarikh!==null) it.calDate=kal.tarikh; }
     computeItem(it); EDITING=null; OPEN.add(it.key);
     renderAll();
-    toast(`${it.peralatan} (${it.nama}): ${updates.length} komponen dikemas kini.`);
+    toast(`${it.peralatan} (${it.nama}): ${[updates.length?updates.length+' komponen':'',kal?'kalibrasi':''].filter(Boolean).join(' & ')} dikemas kini.`);
     setTimeout(()=>{ if(EDITING===null) load(); }, 1500);
   }catch(err){
     const m = err.name==='AbortError' ? 'Sambungan tamat masa. Semak dalam sheet dulu sebelum cuba lagi.'
       : /fetch|network/i.test(err.message) ? 'Tak dapat sambung ke Apps Script. Semak SCRIPT_URL dan akses Web App (Anyone).'
       : err.message;
     say(m,true); btn.disabled=false;
+  }
+}
+
+/* ===== Paparan jadual & Export PDF ===== */
+const PDF_LIBS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'
+];
+let VIEW = store.get('inv_view')==='jadual' ? 'jadual' : 'senarai';
+
+function setView(v){
+  VIEW=v; store.set('inv_view',v);
+  document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.view===v)));
+  renderList();
+}
+
+const calDueText = it => it.cal && it.cal.due ? (it.cal.state==='tamat' ? 'Tamat ' : 'Sah hingga ')+fmtDate(it.cal.due) : '';
+
+function renderTable(items){
+  const showUpd=items.some(it=>it.komponen.some(c=>c.upd));
+  const span={};
+  for(const it of items) span[it.nama]=(span[it.nama]||0)+Math.max(it.komponen.length,1);
+  let html=`<div class="tbl-wrap"><table class="sheet"><thead><tr><th>Nama</th><th>Peralatan</th><th>S/N</th><th>Detail</th>${HAS_CAL?'<th>Status Kalibrasi</th><th>Tarikh Kalibrasi</th>':''}<th>Status</th><th>Catatan</th>${showUpd?'<th>Kemaskini</th>':''}</tr></thead><tbody>`;
+  let prev=null;
+  for(const it of items){
+    const comps=it.komponen.length?it.komponen:[null], n=comps.length;
+    const newPerson=it.nama!==prev; prev=it.nama;
+    comps.forEach((c,i)=>{
+      html+=`<tr class="${i===0?'grp':''}${i===0&&newPerson?' person':''}">`;
+      if(i===0&&newPerson) html+=`<td rowspan="${span[it.nama]}" class="nm">${esc(it.nama)}</td>`;
+      if(i===0) html+=`<td rowspan="${n}" class="eqc"><button type="button" class="lnk" data-goto="${it.id}" title="Buka dalam paparan senarai">${esc(it.peralatan)}</button></td><td rowspan="${n}" class="snc">${it.sn?esc(it.sn):'<span class="mut">-</span>'}</td>`;
+      html+=`<td>${c?esc(c.detail):'<span class="mut">Tiada komponen direkod</span>'}</td>`;
+      if(HAS_CAL && i===0){
+        html+=`<td rowspan="${n}" class="eqc">${it.cal?`<span class="pill p-${CAL_PILL[it.cal.state]}">${esc(it.calStatus||it.cal.label)}</span>`:'<span class="mut">-</span>'}</td>`
+            + `<td rowspan="${n}" class="eqc num">${it.calDate?esc(it.calDate):'<span class="mut">-</span>'}${calDueText(it)?`<span class="cal-d">${calDueText(it)}</span>`:''}</td>`;
+      }
+      html+= c
+        ? `<td><span class="pill p-${c.status}">${esc(COMP_LABEL[c.status]||c.raw)}</span></td><td>${esc(c.catatan)}</td>${showUpd?`<td class="mut">${esc(c.upd)}${c.oleh?' · '+esc(c.oleh):''}</td>`:''}`
+        : `<td></td><td></td>${showUpd?'<td></td>':''}`;
+      html+='</tr>';
+    });
+  }
+  $('#list').innerHTML=html+'</tbody></table></div>';
+}
+
+let libP=null;
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src=src;
+    s.onload=()=>res(); s.onerror=()=>rej(new Error('Gagal memuatkan modul PDF. Semak sambungan internet.'));
+    document.head.appendChild(s);
+  });
+}
+function loadPdfLibs(){
+  if(!libP) libP=loadScript(PDF_LIBS[0]).then(()=>loadScript(PDF_LIBS[1])).catch(e=>{ libP=null; throw e; });
+  return libP;
+}
+function filterLabel(){
+  const p=[];
+  if(F.surv) p.push('Pemegang: '+F.surv);
+  if(F.cat) p.push('Kategori: '+F.cat);
+  if(F.st) p.push('Status: '+({rosak:'Ada kerosakan',semak:'Belum lengkap',nota:'Bernota',baik:'Baik',kal:'Kalibrasi tamat / hampir tamat'}[F.st]));
+  if(F.q) p.push('Carian: "'+F.q+'"');
+  return p.length ? p.join('  |  ') : 'Semua peralatan';
+}
+const srcLabel = () => source==='script' ? 'Google Sheets via Apps Script (live)' : source==='live' ? 'Google Sheets CSV (live)' : `Snapshot ${SNAPSHOT_DATE}`;
+const PDF_ST = {
+  baik:  [[11,122,85],[226,247,238]],
+  rosak: [[180,35,40],[253,236,237]],
+  kosong:[[146,82,10],[255,243,214]],
+  semak: [[146,82,10],[255,243,214]],
+  lain:  [[59,51,224],[233,232,253]]
+};
+
+async function exportPDF(){
+  const items=ITEMS.filter(matches);
+  if(!items.length){ toast('Tiada data untuk dieksport. Ubah tapisan dulu.'); return; }
+  const btn=$('#exportPdf'); const label=btn.textContent;
+  btn.disabled=true; btn.textContent='Menjana PDF…';
+  try{
+    await loadPdfLibs();
+    const { jsPDF } = window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+    const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight(), M=36;
+    const INDIGO=[59,51,224], YELLOW=[255,229,0], TEXT=[20,22,46], MUTED=[107,112,137], WHITE=[255,255,255];
+    const now=new Date(), TOTAL='{total_pages_count_string}';
+    const comps=items.flatMap(i=>i.komponen);
+    const baik=comps.filter(c=>c.status==='baik').length;
+    const rosak=comps.filter(c=>c.status==='rosak').length;
+    const kosong=comps.filter(c=>c.status==='kosong').length;
+    const calBad=items.filter(i=>i.cal&&(i.cal.state==='tamat'||i.cal.state==='hampir')).length;
+    const showUpd=comps.some(c=>c.upd);
+    const flt=filterLabel();
+
+    const drawFooter=(pg)=>{
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+      doc.text(`Inventori Peralatan Jurukur  |  Dijana ${fmtTime(now)}`, M, H-18);
+      doc.text(`Muka ${pg} / ${TOTAL}`, W-M-60, H-18);
+    };
+
+    doc.setFillColor(...YELLOW); doc.roundedRect(M,M,28,28,4,4,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(...TEXT);
+    doc.text('Inventori Peralatan Jurukur', M+38, M+13);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+    doc.text(`Dijana ${fmtTime(now)}  |  Sumber: ${srcLabel()}  |  ${flt}`, M+38, M+26);
+
+    const sum=[['Unit peralatan',items.length],['Komponen',comps.length],['Kadar baik',pct(baik,comps.length)+'%'],['Tidak baik',rosak],['Tiada rekod',kosong]];
+    if(HAS_CAL) sum.push(['Kalibrasi perlu tindakan',calBad]);
+    const gap=8, bw=(W-2*M-gap*(sum.length-1))/sum.length, by=M+42;
+    sum.forEach(([l,v],i)=>{
+      const x=M+i*(bw+gap), ind=i%2===1;
+      doc.setFillColor(...(ind?INDIGO:YELLOW)); doc.roundedRect(x,by,bw,42,4,4,'F');
+      doc.setTextColor(...(ind?WHITE:TEXT));
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.text(l.toUpperCase(), x+10, by+14);
+      doc.setFontSize(15); doc.text(String(v), x+10, by+33);
+    });
+
+    // Lajur ikut susunan sheet; Nama/Peralatan/S/N/Kalibrasi digabung (rowSpan) per alat
+    const head=['Nama','Peralatan','S/N','Detail',...(HAS_CAL?['Status Kalibrasi','Tarikh Kalibrasi']:[]),'Status','Catatan',...(showUpd?['Kemaskini']:[])];
+    const body=[];
+    for(const it of items){
+      const list=it.komponen.length?it.komponen:[null], n=list.length;
+      list.forEach((c,i)=>{
+        const row=[];
+        if(i===0) row.push({content:it.nama,rowSpan:n,_grp:1},{content:it.peralatan,rowSpan:n,_grp:1},{content:it.sn||'-',rowSpan:n,_grp:1});
+        row.push(c ? (c.detailRaw||'-') : 'Tiada komponen direkod');
+        if(HAS_CAL && i===0){
+          row.push({content: it.cal ? (it.calStatus||it.cal.label) : '-', rowSpan:n, _grp:1, _cal: it.cal?it.cal.state:null});
+          row.push({content: (it.calDate||'-')+(calDueText(it)?'\n'+calDueText(it):''), rowSpan:n, _grp:1});
+        }
+        if(c){ row.push({content:COMP_LABEL[c.status]||c.raw, _st:c.status}, c.catatan||''); }
+        else { row.push('',''); }
+        if(showUpd) row.push(c&&c.upd ? c.upd+(c.oleh?' ('+c.oleh+')':'') : '');
+        body.push(row);
+      });
+    }
+    const colW = HAS_CAL
+      ? {0:{cellWidth:60,fontStyle:'bold'},1:{cellWidth:100,fontStyle:'bold'},2:{cellWidth:82},3:{cellWidth:96},4:{cellWidth:70},5:{cellWidth:70},6:{cellWidth:56},...(showUpd?{8:{cellWidth:96,textColor:MUTED}}:{})}
+      : {0:{cellWidth:70,fontStyle:'bold'},1:{cellWidth:120,fontStyle:'bold'},2:{cellWidth:95},3:{cellWidth:120},4:{cellWidth:64},...(showUpd?{6:{cellWidth:110,textColor:MUTED}}:{})};
+
+    doc.autoTable({
+      startY: by+56,
+      margin: {left:M, right:M, top:M+18, bottom:M},
+      head: [head], body, theme:'grid', rowPageBreak:'avoid',
+      styles: {font:'helvetica', fontSize:8, cellPadding:4, lineColor:[214,217,230], lineWidth:.5, textColor:TEXT, valign:'top', overflow:'linebreak'},
+      headStyles: {fillColor:INDIGO, textColor:WHITE, fontStyle:'bold'},
+      columnStyles: colW,
+      didParseCell(d){
+        if(d.section!=='body') return;
+        const raw=d.cell.raw;
+        if(raw && raw._grp) d.cell.styles.fillColor=[248,249,252];
+        if(raw && raw._st){
+          const [tc,fc]=PDF_ST[raw._st]||PDF_ST.lain;
+          d.cell.styles.textColor=tc; d.cell.styles.fillColor=fc; d.cell.styles.fontStyle='bold';
+        }
+        if(raw && raw._cal){
+          const [tc,fc]=PDF_ST[CAL_PILL[raw._cal]]||PDF_ST.lain;
+          d.cell.styles.textColor=tc; d.cell.styles.fillColor=fc; d.cell.styles.fontStyle='bold';
+        }
+      },
+      didDrawPage(d){
+        if(d.pageNumber>1){
+          doc.setFillColor(...YELLOW); doc.rect(M,M-12,10,10,'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+          doc.text('Inventori Peralatan Jurukur', M+16, M-4);
+          doc.setFont('helvetica','normal'); doc.setTextColor(...MUTED);
+          doc.text(flt, W-M, M-4, {align:'right'});
+        }
+        drawFooter(d.pageNumber);
+      }
+    });
+
+    let y=doc.lastAutoTable.finalY+34;
+    if(y+40>H-M){ doc.addPage(); drawFooter(doc.internal.getNumberOfPages()); y=M+30; }
+    doc.setDrawColor(...MUTED); doc.setLineWidth(.6); doc.setFontSize(9); doc.setTextColor(...TEXT); doc.setFont('helvetica','normal');
+    const sw=(W-2*M-40)/3;
+    ['Disediakan oleh','Disemak oleh','Tarikh'].forEach((l,i)=>{
+      const x=M+i*(sw+20);
+      doc.line(x,y,x+sw,y); doc.text(l,x,y+13);
+    });
+
+    if(typeof doc.putTotalPages==='function') doc.putTotalPages(TOTAL);
+    const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+    doc.save(`Inventori-Peralatan_${(F.surv||'Semua').replace(/[^\w-]+/g,'_')}_${stamp}.pdf`);
+    toast(window.self!==window.top
+      ? 'PDF dijana. Kalau fail tak dimuat turun, buka dashboard terus di GitHub Pages.'
+      : `PDF dijana: ${items.length} unit, ${comps.length} komponen.`);
+  }catch(err){
+    console.error(err); toast(err.message||'Gagal menjana PDF.');
+  }finally{
+    btn.disabled=false; btn.textContent=label;
   }
 }
 
@@ -982,6 +1302,7 @@ $('#list').addEventListener('toggle',e=>{
 },true);
 
 $('#list').addEventListener('click',e=>{
+  const g=e.target.closest('[data-goto]'); if(g){ goTo(+g.dataset.goto); return; }
   const b=e.target.closest('[data-act]'); if(!b) return;
   const box=b.closest('.item'); const it=ITEMS[+box.dataset.id]; if(!it) return;
   switch(b.dataset.act){
@@ -994,6 +1315,14 @@ $('#list').addEventListener('click',e=>{
     case 'save': saveItem(it,box,b); break;
   }
 });
+
+document.querySelectorAll('[data-view]').forEach(b=>{
+  b.setAttribute('aria-pressed',String(b.dataset.view===VIEW));
+  b.addEventListener('click',()=>{ if(EDITING!==null){ toast('Simpan atau batal edit dulu.'); return; } setView(b.dataset.view); });
+});
+$('#exportPdf').addEventListener('click',exportPDF);
+$('#kal').addEventListener('click',e=>{ const g=e.target.closest('[data-goto]'); if(g) goTo(+g.dataset.goto); });
+{ const dl=document.createElement('datalist'); dl.id='calSuggest'; dl.innerHTML=CAL_STATUS_SUGGEST.map(v=>`<option value="${v}">`).join(''); document.body.appendChild(dl); }
 
 load();
 </script>
