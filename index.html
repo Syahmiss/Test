@@ -192,6 +192,46 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 .msg.bad{color:#b42328;font-weight:500}
 .toast{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:min(420px,calc(100vw - 32px));background:#141631;color:#fff;padding:12px 16px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(20,22,46,.25);z-index:20}
 @media (max-width:520px){.edit-bar .e-oleh{max-width:none}.edit-bar .spacer{display:none}.ef{flex-direction:column}.ef select{flex-basis:auto}}
+
+/* Kad pemegang */
+.grid3{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+@media (max-width:1080px){.grid3 .attn-panel{grid-column:auto}}
+@media (max-width:860px){.grid3{grid-template-columns:1fr}}
+.pg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:16px}
+.pg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.pg.sel{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-soft)}
+.pg-head{display:flex;gap:12px;align-items:flex-start}
+.pg-head>div{min-width:0;flex:1}
+.pg-ico{width:40px;height:40px;border-radius:8px;background:var(--yellow);display:grid;place-items:center;font-weight:800;font-size:14px;flex:none}
+.pg-name{font-weight:700;font-size:17px;line-height:1.25}
+.pg-sub{font-size:12px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11px;font-weight:600;color:var(--indigo);background:var(--indigo-soft);border:1px solid var(--indigo-line);border-radius:4px;padding:1px 6px}
+.lbl-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+.lbl-row b{color:var(--indigo);letter-spacing:0;text-transform:none;font-size:13px}
+.eq-list{list-style:none;margin:-6px 0 0;padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);max-height:336px;overflow:auto}
+.eq-list button{width:100%;display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:0;background:none;border-radius:6px;text-align:left;cursor:pointer}
+.eq-list button:hover{background:var(--surface)}
+.eq-list li+li button{border-top:1px solid var(--line);border-radius:0}
+.sd{width:8px;height:8px;border-radius:50%}
+.sd.baik{background:var(--good)}.sd.rosak{background:var(--bad)}.sd.semak{background:var(--warn)}
+.eq-list .en{font-size:13px;font-weight:600;min-width:0}
+.eq-list .es{display:block;font-size:11px;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.eq-list .ec{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.eq-list .ec.bad{color:#b42328;font-weight:600}
+.eq-list .ec.warn{color:#92520a;font-weight:600}
+.prog{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;margin-top:-6px}
+.prog-top{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.prog-top .pt-l{display:inline-flex;align-items:center;gap:6px}
+.prog-top .pt-l::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--indigo)}
+.prog-top .pt-r{font-size:12px;color:var(--muted)}
+.prog-top .pt-r b{color:var(--text)}
+.bar .g.full{background:var(--good)}
+.pg-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding-top:12px;border-top:1px solid var(--line)}
+.pg-foot b{color:var(--text);font-weight:600}
+.pg [data-surv]{align-self:flex-start}
+.item{scroll-margin-top:16px}
+.item.flash{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-soft)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -209,11 +249,12 @@ header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-
 
   <section class="kpis" id="kpis" aria-label="Ringkasan"></section>
 
+  <section class="panel" id="pemegang">
+    <h2>Peralatan Mengikut Pemegang <small id="pgSub"></small></h2>
+    <div class="pg-grid" id="pg"></div>
+  </section>
+
   <section class="grid3">
-    <div class="panel">
-      <h2>Mengikut Pemegang <small>Klik untuk tapis</small></h2>
-      <div class="surv" id="surv"></div>
-    </div>
     <div class="panel">
       <h2>Mengikut Kategori <small id="catSub"></small></h2>
       <div class="cats" id="cats"></div>
@@ -652,18 +693,64 @@ function renderKPI(){
     <div class="kpi"><span class="lbl">Tiada rekod status</span><span class="val num">${kosong}</span><span class="sub">${kosong?'perlu dilengkapkan':'semua komponen direkod'}</span></div>`;
 }
 
+function latestUpd(comps){
+  let best='', bt=0;
+  for(const c of comps){
+    const m=/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/.exec(c.upd||''); if(!m) continue;
+    const t=new Date(+m[3],m[2]-1,+m[1],+(m[4]||0),+(m[5]||0)).getTime();
+    if(t>bt){ bt=t; best=c.upd; }
+  }
+  return best;
+}
 function renderSurv(){
-  const by={};
-  for(const it of ITEMS){ (by[it.nama]=by[it.nama]||[]).push(it); }
-  $('#surv').innerHTML=Object.entries(by).map(([n,its])=>{
+  const by=new Map();
+  for(const it of ITEMS){ if(!by.has(it.nama)) by.set(it.nama,[]); by.get(it.nama).push(it); }
+  $('#pgSub').textContent=`${by.size} pemegang · ${ITEMS.length} unit`;
+  $('#pg').innerHTML=[...by].map(([n,its])=>{
     const comps=its.flatMap(i=>i.komponen);
-    const b=comps.filter(c=>c.status==='baik').length, r=comps.filter(c=>c.status==='rosak').length, k=comps.length-b-r;
-    return `<button type="button" class="sv" data-surv="${esc(n)}" aria-pressed="${F.surv===n}">
-      <span class="nm">${esc(n)}<span class="num">${pct(b,comps.length)}%</span></span>
-      <span class="bar" aria-hidden="true"><i class="g" style="width:${pct(b,comps.length)}%"></i><i class="w" style="width:${k/comps.length*100}%"></i><i class="b" style="width:${r/comps.length*100}%"></i></span>
-      <span class="meta"><span><b class="num">${its.length}</b> unit</span><span><b class="num">${comps.length}</b> komponen</span><span class="${r?'bad':''}"><b class="num">${r}</b> tidak baik</span></span>
-    </button>`;
+    const b=comps.filter(c=>c.status==='baik').length, r=comps.filter(c=>c.status==='rosak').length;
+    const k=comps.filter(c=>c.status==='kosong').length, nota=comps.filter(c=>c.catatan).length;
+    const isu=its.filter(i=>i.rosak).length, p=pct(b,comps.length), tot=comps.length||1;
+    const pill = isu ? `<span class="pill p-rosak">${isu} unit ada isu</span>`
+      : k ? '<span class="pill p-semak">Belum lengkap</span>' : '<span class="pill p-baik">Semua baik</span>';
+    const cats=[...CATEGORIES.map(c=>c[0]),CAT_OTHER].filter(c=>its.some(i=>i.kategori===c));
+    const ini=n.split(/\s+/).filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const sel=F.surv===n;
+    return `<article class="pg${sel?' sel':''}">
+      <div class="pg-head"><span class="pg-ico" aria-hidden="true">${esc(ini)}</span>
+        <div><div class="pg-name">${esc(n)}</div><div class="pg-sub">Pemegang peralatan</div></div>${pill}</div>
+      <div class="tags">${cats.map(c=>`<span class="tag">${esc(c)}</span>`).join('')}</div>
+      <div class="lbl-row"><span>Peralatan diselia (${its.length})</span></div>
+      <ul class="eq-list">${its.map(it=>{
+        const nn=it.komponen.length;
+        const ec = it.rosak ? `<span class="ec bad">${it.rosak} tidak baik</span>`
+          : it.kosong ? `<span class="ec warn">${it.kosong} tiada rekod</span>`
+          : `<span class="ec">${it.baik}/${nn} baik</span>`;
+        return `<li><button type="button" data-goto="${it.id}" title="Buka dalam Daftar Peralatan">
+          <span class="sd ${it.state}" role="img" aria-label="${STATE_LABEL[it.state]}"></span>
+          <span class="en">${esc(it.peralatan)}<span class="es">${it.sn?esc(it.sn):'Tiada S/N'} · ${esc(it.kategori)}${it.dup?' · S/N berulang':''}</span></span>${ec}</button></li>`;
+      }).join('')}</ul>
+      <div class="lbl-row"><span>Status komponen</span><b class="num">${p}%</b></div>
+      <div class="prog">
+        <div class="prog-top"><span class="pt-l">Komponen baik</span><span class="pt-r num">Baik: <b>${b}</b> / ${comps.length}</span></div>
+        <span class="bar" aria-hidden="true"><i class="g${p===100?' full':''}" style="width:${b/tot*100}%"></i><i class="w" style="width:${k/tot*100}%"></i><i class="b" style="width:${r/tot*100}%"></i></span>
+      </div>
+      <div class="pg-foot"><span>Tidak baik: <b class="num">${r}</b> · Catatan: <b class="num">${nota}</b></span><span>Kemaskini: <b>${esc(latestUpd(comps)||'—')}</b></span></div>
+      <button type="button" class="btn sm" data-surv="${esc(n)}" aria-pressed="${sel}">${sel?'Buang tapisan':'Tapis daftar ikut nama ini'}</button>
+    </article>`;
   }).join('');
+}
+
+function goTo(id){
+  const it=ITEMS[id]; if(!it) return;
+  if(EDITING!==null && EDITING!==it.key){ toast('Simpan atau batal edit dulu.'); return; }
+  Object.assign(F,{surv:it.nama,cat:'',st:'',q:''}); $('#q').value=''; $('#fSt').value='';
+  OPEN.add(it.key); renderFiltered();
+  const el=document.querySelector(`.item[data-id="${id}"]`); if(!el) return;
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+  el.querySelector('summary')?.focus({preventScroll:true});
+  el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1800);
 }
 
 function renderCats(){
@@ -883,7 +970,7 @@ $('#q').addEventListener('input',e=>{F.q=e.target.value.trim().toLowerCase(); re
 $('#fSurv').addEventListener('change',e=>{F.surv=e.target.value; renderFiltered();});
 $('#fCat').addEventListener('change',e=>{F.cat=e.target.value; renderFiltered();});
 $('#fSt').addEventListener('change',e=>{F.st=e.target.value; renderList();});
-$('#surv').addEventListener('click',e=>{const b=e.target.closest('[data-surv]'); if(!b) return; F.surv=F.surv===b.dataset.surv?'':b.dataset.surv; renderFiltered();});
+$('#pg').addEventListener('click',e=>{const g=e.target.closest('[data-goto]'); if(g){ goTo(+g.dataset.goto); return; } const b=e.target.closest('[data-surv]'); if(!b) return; F.surv=F.surv===b.dataset.surv?'':b.dataset.surv; renderFiltered(); if(F.surv) document.querySelector('#list')?.scrollIntoView({behavior:'smooth',block:'start'});});
 $('#cats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]'); if(!b) return; F.cat=F.cat===b.dataset.cat?'':b.dataset.cat; renderFiltered();});
 $('#toggleAll').addEventListener('click',e=>{const o=e.target.dataset.open==='1'; e.target.dataset.open=o?'0':'1'; e.target.textContent=o?'Buka semua':'Tutup semua'; if(o) OPEN.clear(); renderList();});
 $('#refresh').addEventListener('click',()=>{ if(EDITING===null) load(); else toast('Simpan atau batal edit dulu sebelum muat semula.'); });
