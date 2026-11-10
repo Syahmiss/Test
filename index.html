@@ -1,0 +1,912 @@
+<title>Inventori Peralatan Jurukur</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: header strip → KPI rail → surveyor + category + attention panels → filterable equipment register (expandable components) */
+/* Gaya GEO-STAT: light, indigo + kuning, Inter, kad putih bersempadan nipis */
+:root{
+  color-scheme: light;
+  --bg:#f3f4f8;
+  --surface:#ffffff;
+  --surface-2:#f8f9fc;
+  --line:#e3e5ee;
+  --text:#14162e;
+  --muted:#6b7089;
+  --indigo:#3b33e0;
+  --indigo-2:#2622d2;
+  --indigo-soft:#e9e8fd;
+  --indigo-line:#c9c6f7;
+  --yellow:#ffe500;
+  --good:#10b981;
+  --good-soft:#e2f7ee;
+  --good-line:#a7e8cd;
+  --bad:#e5484d;
+  --bad-soft:#fdeced;
+  --bad-line:#f6bcbe;
+  --warn:#d97706;
+  --warn-soft:#fff3d6;
+  --warn-line:#f7d58a;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+  --shadow:0 1px 2px rgba(20,22,46,.05),0 2px 8px rgba(20,22,46,.04);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:20px 48px;
+}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.01em}
+
+/* Header */
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:14px}
+.brand::before{content:"";width:44px;height:44px;border-radius:8px;background:var(--yellow);flex:none}
+.brand .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;order:2}
+.brand>div{display:flex;flex-direction:column}
+.brand h1{font-weight:800;font-size:clamp(20px,3vw,26px);line-height:1.15;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.src{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.src.live{color:#0b7a55;background:var(--good-soft);border-color:var(--good-line)}
+.src.live .dot{background:var(--good)}
+.src.snap{color:#92520a;background:var(--warn-soft);border-color:var(--warn-line)}
+.src.snap .dot{background:var(--warn)}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600}
+.btn:hover{border-color:var(--indigo);color:var(--indigo)}
+.btn.primary{background:var(--yellow);border-color:var(--yellow);color:var(--text)}
+.btn.primary:hover{filter:brightness(.96);color:var(--text)}
+.btn:disabled{opacity:.5;cursor:wait}
+
+/* KPI: kuning & indigo berselang */
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+.kpi{padding:20px 22px;border-radius:var(--r);display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--yellow);color:var(--text)}
+.kpi:nth-child(even){background:linear-gradient(135deg,#5148ec,var(--indigo-2));color:#fff}
+.kpi .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;opacity:.85}
+.kpi .val{font-weight:800;font-size:30px;line-height:1.15}
+.kpi .sub{font-size:13px;opacity:.85}
+
+/* Panels */
+.grid3{display:grid;grid-template-columns:1.25fr 1fr 1.15fr;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:20px 22px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.panel h2{font-weight:700;font-size:17px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px;letter-spacing:-.005em}
+.panel h2 small{font-weight:400;font-size:12px;color:var(--muted)}
+
+.surv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sv{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.sv:hover{border-color:var(--indigo-line)}
+.sv[aria-pressed="true"]{border-color:var(--indigo);background:var(--indigo-soft)}
+.sv .nm{font-weight:700;font-size:15px;display:flex;justify-content:space-between;gap:6px}
+.sv .nm span{font-size:13px;color:var(--indigo);font-weight:700}
+.sv .meta{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.sv .meta b{color:var(--text);font-weight:600}
+.sv .meta .bad b{color:var(--bad)}
+.bar{height:7px;border-radius:4px;background:#eceef5;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .g{background:linear-gradient(90deg,#5148ec,var(--indigo-2))} .bar .b{background:var(--bad)} .bar .w{background:var(--warn)}
+
+.cats{display:flex;flex-direction:column;gap:9px}
+.cat{display:grid;grid-template-columns:128px 1fr 30px;align-items:center;gap:10px;font-size:13px;background:none;border:0;padding:2px 0;cursor:pointer;text-align:left}
+.cat:hover .cn{color:var(--indigo)}
+.cat[aria-pressed="true"] .cn{color:var(--indigo);font-weight:700}
+.cat .cn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat .track{height:14px;background:#eceef5;border-radius:4px;overflow:hidden;display:flex}
+.cat .track i{display:block;height:100%}
+.cat .track .g{background:var(--indigo)}
+.cat .track .b{background:var(--bad)}
+.cat .ct{text-align:right;color:var(--muted);font-weight:600}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+.attn{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:290px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.attn li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:start}
+.attn li:last-child{border-bottom:0}
+.attn .t{font-size:13px;font-weight:600}
+.attn .s{font-size:12px;color:var(--muted)}
+.attn .n{font-size:12px;color:var(--text);font-style:italic}
+
+.checks{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;background:var(--warn-soft);border:1px solid var(--warn-line)}
+.chk.ok{background:var(--good-soft);border-color:var(--good-line)}
+.chk p{margin:0;font-weight:600}
+.chk .s{color:var(--muted);font-size:12px;font-weight:400}
+
+/* Pills ala template */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.p-baik{color:#0b7a55;background:var(--good-soft);border-color:var(--good-line)}
+.p-rosak{color:#b42328;background:var(--bad-soft);border-color:var(--bad-line)}
+.p-semak,.p-kosong{color:#92520a;background:var(--warn-soft);border-color:var(--warn-line)}
+.p-lain{color:var(--indigo);background:var(--indigo-soft);border-color:var(--indigo-line)}
+
+/* Register */
+.reg-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;flex:1;justify-content:flex-end}
+.filters input,.filters select{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:13px;min-width:0}
+.filters select{background:var(--surface)}
+.filters input{flex:1 1 220px;max-width:320px}
+.filters input::placeholder{color:#9a9eb3}
+.cols,.item summary{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.5fr) 132px 18px;gap:14px;align-items:center}
+.cols{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--muted);padding:0 14px 8px}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.item summary{list-style:none;cursor:pointer;padding:14px}
+.item summary::-webkit-details-marker{display:none}
+.item summary:hover{background:var(--surface-2)}
+.item[open]{border-color:var(--indigo-line)}
+.item .eq{font-weight:700;font-size:15px}
+.item .kt{display:inline-block;margin-top:4px;font-size:11px;font-weight:600;color:var(--indigo);background:var(--indigo-soft);border:1px solid var(--indigo-line);border-radius:4px;padding:1px 6px}
+.item .sn{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;overflow-wrap:anywhere}
+.item .sn.none{color:var(--muted);font-weight:400;font-style:italic}
+.item .sn .dup{color:var(--warn);font-size:11px;font-style:normal;display:block}
+.item .cmp{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+.chev{width:18px;height:18px;color:var(--muted);transition:transform .15s}
+.item[open] .chev{transform:rotate(90deg);color:var(--indigo)}
+.comps{list-style:none;margin:0 14px 14px;padding:6px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0 18px}
+.comps li{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;min-width:0}
+.comps .d{min-width:0}
+.comps .c{display:block;font-size:12px;color:var(--indigo)}
+.empty{padding:28px 14px;text-align:center;color:var(--muted)}
+.foot{font-size:12px;color:#c9cbe0;background:#141631;border-radius:var(--r);padding:16px 20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+@media (max-width:1080px){.grid3{grid-template-columns:1fr 1fr}.grid3 .attn-panel{grid-column:1/-1}}
+@media (max-width:860px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpis .kpi:first-child{grid-column:1/-1}
+  .grid3{grid-template-columns:1fr}
+  .cols{display:none}
+  .item summary{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"eq st" "sv sv" "sn sn" "cm cm";gap:6px 10px}
+  .item summary>.c-eq{grid-area:eq}.item summary>.c-sv{grid-area:sv;font-size:12px;color:var(--muted)}
+  .item summary>.c-sn{grid-area:sn}.item summary>.c-cm{grid-area:cm}.item summary>.c-st{grid-area:st}
+  .item summary>.chev{display:none}
+  .filters{justify-content:stretch}.filters input{max-width:none;flex-basis:100%}.filters select{flex:1 1 40%}
+}
+@media (max-width:420px){.surv{grid-template-columns:1fr}.cat{grid-template-columns:100px 1fr 26px}}
+
+/* Edit status */
+.comps .u{display:block;font-size:11px;color:var(--muted)}
+.item-act{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:0 14px 14px}
+.hint{font-size:12px;color:var(--muted)}
+.btn.sm{padding:6px 12px;font-size:12px}
+.item.is-edit{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-soft)}
+.edit{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
+.edit .comps{margin-bottom:0}
+.comps.editing{grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr))}
+.comps.editing li{flex-direction:column;align-items:stretch;gap:6px}
+.comps.editing .d{font-weight:600}
+.ef{display:flex;gap:8px;min-width:0}
+.ef select{flex:0 0 128px;min-width:0}
+.ef input{flex:1 1 auto;min-width:0}
+.edit select,.edit input{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px}
+.edit select:focus,.edit input:focus{border-color:var(--indigo);outline:none;box-shadow:0 0 0 3px var(--indigo-soft)}
+.edit-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 14px}
+.edit-bar .e-oleh{flex:1 1 160px;max-width:220px}
+.edit-bar .e-pin{flex:0 1 100px}
+.edit-bar .spacer{flex:1 1 0}
+.msg{margin:0 14px;font-size:13px;color:var(--muted);min-height:1.2em}
+.msg.bad{color:#b42328;font-weight:500}
+.toast{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:min(420px,calc(100vw - 32px));background:#141631;color:#fff;padding:12px 16px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(20,22,46,.25);z-index:20}
+@media (max-width:520px){.edit-bar .e-oleh{max-width:none}.edit-bar .spacer{display:none}.ef{flex-direction:column}.ef select{flex-basis:auto}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div>
+      <h1>Inventori Peralatan Jurukur</h1>
+      <div class="eyebrow">Daftar Aset · Unit Ukur</div>
+    </div></div>
+    <div class="sync">
+      <span id="src" class="src"><span class="dot"></span><span id="srcText">Memuatkan data…</span></span>
+      <button id="refresh" class="btn primary" type="button">Muat semula</button>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Ringkasan"></section>
+
+  <section class="grid3">
+    <div class="panel">
+      <h2>Mengikut Pemegang <small>Klik untuk tapis</small></h2>
+      <div class="surv" id="surv"></div>
+    </div>
+    <div class="panel">
+      <h2>Mengikut Kategori <small id="catSub"></small></h2>
+      <div class="cats" id="cats"></div>
+      <div class="legend"><span><i style="background:var(--indigo)"></i>Unit sihat</span><span><i style="background:var(--bad)"></i>Unit ada kerosakan</span></div>
+    </div>
+    <div class="panel attn-panel">
+      <h2>Perlu Perhatian <small id="attnSub"></small></h2>
+      <ul class="attn" id="attn"></ul>
+      <div class="checks" id="checks"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="reg-head">
+      <h2 style="margin:0">Daftar Peralatan <small id="regCount"></small></h2>
+      <div class="filters">
+        <input id="q" type="search" placeholder="Cari peralatan, S/N, komponen, catatan…" aria-label="Cari">
+        <select id="fSurv" aria-label="Pemegang"></select>
+        <select id="fCat" aria-label="Kategori"></select>
+        <select id="fSt" aria-label="Status">
+          <option value="">Semua status</option>
+          <option value="rosak">Ada kerosakan</option>
+          <option value="semak">Belum lengkap</option>
+          <option value="nota">Bernota</option>
+          <option value="baik">Baik</option>
+        </select>
+        <button id="toggleAll" class="btn" type="button">Buka semua</button>
+      </div>
+    </div>
+    <div>
+      <div class="cols"><span>Peralatan</span><span>Pemegang</span><span>S/N</span><span>Komponen</span><span>Status</span><span></span></div>
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span>Sumber: Google Sheets (CSV diterbitkan). Status komponen dikira terus dari lajur Status.</span>
+    <span id="footTime"></span>
+  </div>
+</div>
+
+<!-- Snapshot sandaran (10/11/2026). Dipakai bila fetch live gagal, contohnya dalam preview artifact. -->
+<script type="text/csv" id="snapshot">Nama,Peralatan,S/N,Detail,Status,Catatan
+Badrul,GNSS i90,3229629,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Battery Door,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS iBase,4660491,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Battery Door,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS i89,4445240,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,Total Station GM50,1Y011137,Cable Port,Baik,
+,,,Skrin,Baik,
+,,,Casing,Baik,
+,,,Horizontol Bubble,Baik,
+,,,Digital Bubble,Baik,
+,Drone M4E,,Drone,Baik,
+,,,Controller,Baik,
+,Laptop HP,JMC_LS_03,Laptop,Baik,
+,,,Charger,Baik,
+,Controller HCE600,6311301248,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Baik,
+,,,Cassing,Baik,
+,,,Camera,Baik,
+,,,Bateri,Baik,
+,,,Tali,Baik,
+,Controller HCE600,6410303139,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Baik,
+,,,Cassing,Baik,
+,,,Camera,Baik,
+,,,Bateri,Baik,
+,,,Tali,Baik,
+,Controller HCE320,390200732,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Baik,
+,,,Cassing,Baik,Getah reput
+,,,Camera,Baik,Kabur
+,,,Bateri,Baik,
+,,,Tali,Baik,
+,Pole 1,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Tidak Baik,
+,Pole 2,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Tidak Baik,
+,Tripod 1,,Entral fixing screw,Baik,
+,,,Wing screw,Baik,
+,Tripod 2,,Entral fixing screw,Baik,
+,,,Wing screw,Baik,
+,Tripod 3,,Entral fixing screw,Baik,
+,,,Wing screw,Baik,
+,Life Jacket,,Set 1,Baik,
+,,,Set 2,Baik,
+,Safety Helmet,,3 Unit,Baik,
+Riduwan,GNSS i90,3229620,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Battery Door,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS iBase,3716395,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Battery Door,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS i89,3804833,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,Total Station,,Cable Port,Baik,
+,,,Skrin,Baik,
+,,,Casing,Baik,
+,,,Horizontol Bubble,Baik,
+,,,Digital Bubble,Baik,
+,Tough Book Lama,,Screen Monitor,Tidak Baik,Guna untuk backup
+,,,Keypad,Baik,
+,,,Body/Casing,Baik,
+,Tough Book Baru,JMCTB2_2026,Screen Monitor,Baik,Bahasa Jepun
+,,,Keypad,Baik,
+,,,Body/Casing,Baik,
+,Drone M4E,,Drone,Baik,
+,,,Controller,Baik,
+,Laptop HP,JMC_LS_03,Laptop,Baik,
+,,,Charger,Baik,
+,Controller Oukitel,100000000037557,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Tidak Baik,Masih boleh guna
+,,,Cassing,Baik,
+,,,Camera,Baik,
+,,,Bateri,Baik,
+,,,Tali,Baik,
+,Controller Oukitel,G100000000043398,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Baik,
+,,,Cassing,Baik,
+,,,Camera,Baik,
+,,,Bateri,Baik,
+,,,Tali,,
+,Pole 1,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Tidak Baik,
+,Pole 2,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Tidak Baik,
+,Tripod 1,,Entral fixing screw,Baik,Plumbob
+,,,Wing screw,Baik,
+,Tripod 2,,Entral fixing screw,Baik,
+,,,Wing screw,Baik,
+,Tripod 3,,Entral fixing screw,Baik,
+,,,Wing screw,Baik,
+,Life Jacket,,Set 1,Baik,
+,,,Set 2,Baik,
+,Safety Helmet,,2 unit,Baik,Unit lama
+Ridhzuan,GNSS i90,3365396,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Battery Door,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS iBase,3722070,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Battery Door,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS i83,3505678,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,Total Station,ON 0668,Cable Port,Baik,
+,,,Skrin,Baik,
+,,,Casing,Baik,
+,,,Horizontol Bubble,Baik,
+,,,Vertical Bubble,Baik,
+,EML RD8100 Locator,,Skrin,Baik,
+,,,Button,Baik,
+,,,Battery slot,Baik,
+,EML RD8100 Transmeter,,Skrin,Baik,
+,,,Button,Baik,
+,,,Battery slot,Baik,
+,,,Cable port,Baik,
+,GPR Impulse PinPointR,,Skrin monitor,Baik,
+,,,Tayar,Baik,
+,,,Power cable port,Baik,
+,,,Battery port,Baik,
+,,,Battery,Baik,
+,,,Body,Baik,
+,Drone Matrice 3,,Drone,Baik,
+,,,Controller,Baik,
+,Controller HCE600,6405301802,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Baik,
+,,,Cassing,Baik,
+,,,Camera,Baik,
+,,,Bateri,Baik,
+,,,Tali,Baik,
+,Controller Oukitel,100000000045138,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Baik,
+,,,Cassing,Baik,
+,,,Camera,Baik,
+,,,Bateri,Baik,
+,,,Tali,Baik,
+,Pole 1,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Tidak Baik,
+,Pole 2,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Tidak Baik,
+,Tripod 1,,Entral fixing screw,Baik,
+,,,Wing screw,Baik,
+,Tripod 2,,Entral fixing screw,Baik,
+,,,Wing screw,Baik,
+,Life Jacket,,Set 1,Baik,
+,,,Set 2,Baik,
+,Safety Helmet,,4 Unit,Baik,
+,Lampu baton,,2,Baik,
+,Vest TNB,,5,Baik,
+,Flag,,2,Baik,
+,Singboard,,1,Baik,
+,Kon,,5,Baik,
+,Gas Detector,,1 set,Baik,
+Helmi,GNSS i83,3463042,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS i90,3365362,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Battery Door,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,GNSS i76,4289069,UHF Antenna,Baik,
+,,,Serial Port,Baik,
+,,,USB Port,Baik,
+,,,Function Button,Baik,
+,,,Power Button,Baik,
+,,,Skrin,Baik,
+,,,Antenna,Baik,
+,EML RD8000 Locator,,Skrin,Baik,
+,,,Button,Baik,
+,,,Battery slot,Baik,
+,EML RD8000 Transmeter,,Skrin,Baik,
+,,,Button,Baik,
+,,,Battery slot,Baik,
+,,,Cable port,Tidak Baik,Baiki
+,GPR MALA,,Skrin monitor,Baik,
+,,,Tayar,Baik,
+,,,Power cable port,Baik,
+,,,Battery port,Baik,
+,,,Battery,Baik,
+,,,Body,Baik,
+,Drone Phantom 4,,Drone,Baik,
+,,,Controller (iPad),Baik,Casing reput
+,,,Battery,baik,
+,Controller HCE600,6502303660,Slot memori,Baik,
+,,,USB port,Baik,
+,,,Skrin,Baik,Sedikit retak
+,,,Cassing,Baik,
+,,,Camera,Baik,
+,,,Bateri,Baik,
+,,,Tali,Baik,
+,Pole 1,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Baik,
+,Pole 2,,Pole,Baik,
+,,,Skru,Baik,
+,,,Bar Plate,Baik,
+,Tripod 1,,Central fixing screw,Baik,
+,,,Wing screw,Baik,
+</script>
+
+<script>
+/* ===== Konfigurasi ===== */
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTo5oCD7Wd6vTJNFs1WZti8ZKgkHjp869JylM1NbJwFll8rQ6VoHtgkNSoFHnAjON77i9xZC4QwnA91/pub?gid=0&single=true&output=csv';
+// URL Web App Apps Script (Deploy > Web app, berakhir /exec). Kosongkan = mod baca sahaja.
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbS3RpIijwbyqpX71z91851nD-nS8zVE4vvFLyzGdDYMaasl7e37-eMHe7dvc0PWR7/exec';
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 10000;
+const SAVE_TIMEOUT_MS = 25000;
+const SNAPSHOT_DATE = '10/11/2026';
+const STATUS_OPTIONS = ['Baik', 'Tidak Baik'];
+
+const CATEGORIES = [
+  ['GNSS', /gnss/i],
+  ['Total Station', /total\s*station/i],
+  ['Controller', /controller/i],
+  ['Drone', /drone/i],
+  ['Komputer', /laptop|tough\s*book/i],
+  ['Pengesanan Utiliti', /\beml\b|\bgpr\b|locator|transm/i],
+  ['Pole & Tripod', /pole|tripod/i],
+];
+const CAT_OTHER = 'Keselamatan & Lain-lain';
+const HIGH_VALUE = new Set(['GNSS','Total Station','Controller','Drone','Komputer','Pengesanan Utiliti']);
+
+/* ===== Util ===== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const fmtTime = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+const store = {
+  get(k, session){ try{ return (session?sessionStorage:localStorage).getItem(k)||''; }catch{ return ''; } },
+  set(k, v, session){ try{ (session?sessionStorage:localStorage).setItem(k,v); }catch{} }
+};
+async function fetchTimeout(url, opts={}, ms=FETCH_TIMEOUT_MS){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),ms);
+  try{ return await fetch(url,{...opts,signal:ctl.signal}); } finally{ clearTimeout(t); }
+}
+
+function parseCSV(text){
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; }
+      else f+=c;
+    } else if(c==='"') q=true;
+    else if(c===','){ row.push(f); f=''; }
+    else if(c==='\n'||c==='\r'){
+      if(c==='\r'&&text[i+1]==='\n') i++;
+      row.push(f); rows.push(row); row=[]; f='';
+    } else f+=c;
+  }
+  if(f!==''||row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+
+function normStatus(s){
+  const v=(s||'').trim().toLowerCase();
+  if(!v) return 'kosong';
+  if(v.includes('tidak')||v.includes('rosak')) return 'rosak';
+  if(v==='baik') return 'baik';
+  return 'lain';
+}
+const statusLabel = c => c.status==='baik' ? 'Baik' : c.status==='rosak' ? 'Tidak Baik' : c.raw;
+const catOf = name => (CATEGORIES.find(([,re])=>re.test(name))||[CAT_OTHER])[0];
+
+/* Sheet guna gaya "merged": Nama & Peralatan hanya diisi pada baris pertama.
+   Baris dengan Peralatan baru = unit baru. rowNums[i] = nombor baris sebenar dalam sheet. */
+function buildModel(rows, rowNums){
+  if(!rows.length) throw new Error('Data kosong');
+  const head=rows[0].map(h=>String(h).trim().toLowerCase());
+  const idx=k=>head.indexOf(k);
+  const I={nama:idx('nama'),per:idx('peralatan'),sn:idx('s/n'),det:idx('detail'),st:idx('status'),cat:idx('catatan'),
+           upd:idx('kemaskini terakhir'),oleh:idx('dikemaskini oleh')};
+  if(I.nama<0||I.per<0) throw new Error('Header Nama/Peralatan tidak dijumpai');
+  const cell=(r,i)=>i<0?'':String(r[i]??'').trim();
+  const items=[]; let nama='', cur=null;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    if(r.every(c=>!String(c??'').trim())) continue;
+    const n=cell(r,I.nama), p=cell(r,I.per);
+    if(n) nama=n;
+    if(p){ cur={id:items.length, nama, peralatan:p, sn:cell(r,I.sn), kategori:catOf(p), komponen:[]}; items.push(cur); }
+    if(!cur) continue;
+    const det=cell(r,I.det), st=cell(r,I.st), ct=cell(r,I.cat);
+    if(det||st||ct) cur.komponen.push({row:rowNums[i], detailRaw:det, detail:det||'—', raw:st, status:normStatus(st),
+      catatan:ct, upd:cell(r,I.upd), oleh:cell(r,I.oleh)});
+  }
+  for(const it of items){ it.key=`${it.nama}|${it.peralatan}|${it.sn}|${it.komponen[0]?.row??''}`; computeItem(it); }
+  markDups(items);
+  return items;
+}
+function computeItem(it){
+  const k=it.komponen;
+  it.rosak=k.filter(c=>c.status==='rosak').length;
+  it.kosong=k.filter(c=>c.status==='kosong').length;
+  it.baik=k.filter(c=>c.status==='baik').length;
+  it.nota=k.filter(c=>c.catatan).length;
+  it.state = it.rosak ? 'rosak' : it.kosong ? 'semak' : 'baik';
+}
+function markDups(items){
+  const cnt={};
+  for(const it of items) if(it.sn){ const k=it.sn.toUpperCase(); cnt[k]=(cnt[k]||0)+1; }
+  for(const it of items) it.dup=!!(it.sn && cnt[it.sn.toUpperCase()]>1);
+}
+
+/* ===== State ===== */
+let ITEMS=[], source='', loadedAt=null, timer=null, EDITING=null;
+const OPEN=new Set();
+const F={q:'',surv:'',cat:'',st:''};
+const STATE_LABEL={baik:'Baik',rosak:'Ada kerosakan',semak:'Belum lengkap'};
+const COMP_LABEL={baik:'Baik',rosak:'Tidak Baik',kosong:'Tiada rekod'};
+
+/* ===== Render ===== */
+function renderKPI(){
+  const comps=ITEMS.flatMap(i=>i.komponen);
+  const baik=comps.filter(c=>c.status==='baik').length;
+  const rosak=comps.filter(c=>c.status==='rosak').length;
+  const kosong=comps.filter(c=>c.status==='kosong').length;
+  const rosakUnits=ITEMS.filter(i=>i.rosak).length;
+  const people=new Set(ITEMS.map(i=>i.nama)).size;
+  $('#kpis').innerHTML=`
+    <div class="kpi"><span class="lbl">Unit peralatan</span><span class="val num">${ITEMS.length}</span><span class="sub">${people} pemegang · ${new Set(ITEMS.map(i=>i.kategori)).size} kategori</span></div>
+    <div class="kpi"><span class="lbl">Komponen diperiksa</span><span class="val num">${comps.length}</span><span class="sub">${ITEMS.filter(i=>i.nota).length} unit ada catatan</span></div>
+    <div class="kpi"><span class="lbl">Kadar baik</span><span class="val num">${pct(baik,comps.length)}%</span><span class="sub">${baik} komponen baik</span></div>
+    <div class="kpi"><span class="lbl">Tidak baik</span><span class="val num">${rosak}</span><span class="sub">melibatkan ${rosakUnits} unit</span></div>
+    <div class="kpi"><span class="lbl">Tiada rekod status</span><span class="val num">${kosong}</span><span class="sub">${kosong?'perlu dilengkapkan':'semua komponen direkod'}</span></div>`;
+}
+
+function renderSurv(){
+  const by={};
+  for(const it of ITEMS){ (by[it.nama]=by[it.nama]||[]).push(it); }
+  $('#surv').innerHTML=Object.entries(by).map(([n,its])=>{
+    const comps=its.flatMap(i=>i.komponen);
+    const b=comps.filter(c=>c.status==='baik').length, r=comps.filter(c=>c.status==='rosak').length, k=comps.length-b-r;
+    return `<button type="button" class="sv" data-surv="${esc(n)}" aria-pressed="${F.surv===n}">
+      <span class="nm">${esc(n)}<span class="num">${pct(b,comps.length)}%</span></span>
+      <span class="bar" aria-hidden="true"><i class="g" style="width:${pct(b,comps.length)}%"></i><i class="w" style="width:${k/comps.length*100}%"></i><i class="b" style="width:${r/comps.length*100}%"></i></span>
+      <span class="meta"><span><b class="num">${its.length}</b> unit</span><span><b class="num">${comps.length}</b> komponen</span><span class="${r?'bad':''}"><b class="num">${r}</b> tidak baik</span></span>
+    </button>`;
+  }).join('');
+}
+
+function renderCats(){
+  const by={};
+  for(const it of ITEMS){ const c=by[it.kategori]=by[it.kategori]||{n:0,r:0}; c.n++; if(it.rosak) c.r++; }
+  const order=[...CATEGORIES.map(c=>c[0]),CAT_OTHER].filter(c=>by[c]);
+  const max=Math.max(...order.map(c=>by[c].n));
+  $('#catSub').textContent=`${order.length} kategori`;
+  $('#cats').innerHTML=order.map(c=>{
+    const {n,r}=by[c];
+    return `<button type="button" class="cat" data-cat="${esc(c)}" aria-pressed="${F.cat===c}" title="${n} unit, ${r} ada kerosakan">
+      <span class="cn">${esc(c)}</span>
+      <span class="track"><i class="g" style="width:${(n-r)/max*100}%"></i><i class="b" style="width:${r/max*100}%"></i></span>
+      <span class="ct num">${n}</span></button>`;
+  }).join('');
+}
+
+function renderAttn(){
+  const rows=[];
+  for(const it of ITEMS) for(const c of it.komponen){
+    if(c.status==='rosak'||c.status==='kosong'||c.catatan) rows.push({it,c,rank:c.status==='rosak'?0:c.status==='kosong'?1:2});
+  }
+  rows.sort((a,b)=>a.rank-b.rank);
+  $('#attnSub').textContent=`${rows.length} rekod`;
+  $('#attn').innerHTML=rows.length? rows.map(({it,c})=>{
+    const st=c.catatan&&c.status==='baik'?['lain','Bernota']:[c.status,COMP_LABEL[c.status]||c.raw];
+    return `<li><span class="pill p-${st[0]}">${esc(st[1])}</span><div>
+      <div class="t">${esc(it.peralatan)} · ${esc(c.detail)}</div>
+      <div class="s">${esc(it.nama)}${it.sn?` · <span class="mono">${esc(it.sn)}</span>`:''}</div>
+      ${c.catatan?`<div class="n">“${esc(c.catatan)}”</div>`:''}</div></li>`;
+  }).join('') : '<li><span class="pill p-baik">OK</span><div class="t">Tiada isu direkodkan</div></li>';
+
+  const dups={};
+  ITEMS.filter(i=>i.dup).forEach(i=>{ (dups[i.sn.toUpperCase()]=dups[i.sn.toUpperCase()]||[]).push(i); });
+  const noSn=ITEMS.filter(i=>!i.sn && HIGH_VALUE.has(i.kategori));
+  const checks=[];
+  for(const [sn,its] of Object.entries(dups)){
+    checks.push(`<div class="chk"><div><p>S/N <span class="mono">${esc(sn)}</span> muncul ${its.length} kali</p><p class="s">${its.map(i=>esc(i.nama)+' ('+esc(i.peralatan)+')').join(', ')}. Satu unit fizikal tak boleh dipegang dua orang, semak yang mana betul.</p></div></div>`);
+  }
+  if(noSn.length) checks.push(`<div class="chk"><div><p>${noSn.length} unit bernilai tiada S/N</p><p class="s">${noSn.map(i=>esc(i.peralatan)+' – '+esc(i.nama)).join('; ')}</p></div></div>`);
+  if(!checks.length) checks.push('<div class="chk ok"><p>Tiada S/N berulang, semua unit bernilai ada S/N.</p></div>');
+  $('#checks').innerHTML=checks.join('');
+}
+
+function matches(it){
+  if(F.surv && it.nama!==F.surv) return false;
+  if(F.cat && it.kategori!==F.cat) return false;
+  if(F.st==='nota'){ if(!it.nota) return false; }
+  else if(F.st && it.state!==F.st) return false;
+  if(F.q){
+    const hay=[it.nama,it.peralatan,it.sn,it.kategori,...it.komponen.flatMap(c=>[c.detail,c.catatan,c.raw])].join(' ').toLowerCase();
+    if(!F.q.split(/\s+/).every(w=>hay.includes(w))) return false;
+  }
+  return true;
+}
+
+function compView(c){
+  return `<li><span class="d">${esc(c.detail)}${c.catatan?`<span class="c">${esc(c.catatan)}</span>`:''}${c.upd?`<span class="u">Kemaskini ${esc(c.upd)}${c.oleh?' · '+esc(c.oleh):''}</span>`:''}</span><span class="pill p-${c.status}">${esc(COMP_LABEL[c.status]||c.raw)}</span></li>`;
+}
+
+function editorView(it){
+  return `<div class="edit">
+    <ul class="comps editing">${it.komponen.map((c,i)=>{
+      const cur=statusLabel(c);
+      const opts=(c.status==='kosong'?'<option value="" selected>Tiada rekod</option>':'')
+        + (c.status==='lain'?`<option value="${esc(c.raw)}" selected>${esc(c.raw)}</option>`:'')
+        + STATUS_OPTIONS.map(o=>`<option value="${o}" ${cur===o?'selected':''}>${o}</option>`).join('');
+      return `<li data-i="${i}">
+        <label class="d" for="st-${it.id}-${i}">${esc(c.detail)}</label>
+        <div class="ef">
+          <select id="st-${it.id}-${i}" class="e-st">${opts}</select>
+          <input id="ct-${it.id}-${i}" class="e-ct" type="text" maxlength="200" placeholder="Catatan (pilihan)" value="${esc(c.catatan)}" aria-label="Catatan ${esc(c.detail)}">
+        </div></li>`;
+    }).join('')}</ul>
+    <div class="edit-bar">
+      <button type="button" class="btn sm" data-act="allbaik">Tanda semua Baik</button>
+      <input id="oleh-${it.id}" class="e-oleh" type="text" maxlength="60" placeholder="Nama anda" value="${esc(store.get('inv_oleh'))}" aria-label="Nama anda">
+      <input id="pin-${it.id}" class="e-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" value="${esc(store.get('inv_pin',true))}" aria-label="PIN editor">
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-act="cancel">Batal</button>
+      <button type="button" class="btn primary" data-act="save">Simpan perubahan</button>
+    </div>
+    <p class="msg" role="status" aria-live="polite"></p>
+  </div>`;
+}
+
+const CHEV='<svg class="chev" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 4l6 6-6 6"/></svg>';
+function renderList(){
+  const shown=ITEMS.filter(matches);
+  $('#regCount').textContent=`${shown.length} daripada ${ITEMS.length} unit`;
+  if(!shown.length){ $('#list').innerHTML='<div class="empty">Tiada peralatan sepadan dengan tapisan ini. Cuba kosongkan carian atau tukar status.</div>'; return; }
+  const openAll=$('#toggleAll').dataset.open==='1';
+  $('#list').innerHTML=shown.map(it=>{
+    const n=it.komponen.length||1;
+    const isEdit=EDITING===it.key;
+    const open=isEdit||openAll||OPEN.has(it.key)||(F.q&&it.komponen.some(c=>(c.detail+' '+c.catatan).toLowerCase().includes(F.q)));
+    return `<details class="item${isEdit?' is-edit':''}" data-id="${it.id}" ${open?'open':''}>
+      <summary>
+        <div class="c-eq"><div class="eq">${esc(it.peralatan)}</div><div class="kt">${esc(it.kategori)}</div></div>
+        <div class="c-sv">${esc(it.nama)}</div>
+        <div class="c-sn">${it.sn?`<span class="sn">${esc(it.sn)}${it.dup?'<span class="dup">S/N berulang</span>':''}</span>`:'<span class="sn none">Tiada S/N</span>'}</div>
+        <div class="c-cm cmp"><span class="num">${it.baik}/${it.komponen.length} baik${it.nota?` · ${it.nota} catatan`:''}</span>
+          <span class="bar" aria-hidden="true"><i class="g" style="width:${it.baik/n*100}%"></i><i class="w" style="width:${(it.komponen.length-it.baik-it.rosak)/n*100}%"></i><i class="b" style="width:${it.rosak/n*100}%"></i></span></div>
+        <div class="c-st"><span class="pill p-${it.state}">${STATE_LABEL[it.state]}</span></div>
+        ${CHEV}
+      </summary>
+      ${isEdit ? editorView(it) : `<ul class="comps">${it.komponen.map(compView).join('')}</ul>
+      <div class="item-act">${SCRIPT_URL
+        ? `<button type="button" class="btn sm" data-act="edit">Edit status alat</button>`
+        : `<span class="hint">Edit belum aktif. Isi SCRIPT_URL dalam index.html selepas deploy Apps Script.</span>`}</div>`}
+    </details>`;
+  }).join('');
+}
+
+function fillSelects(){
+  const people=[...new Set(ITEMS.map(i=>i.nama))];
+  const cats=[...CATEGORIES.map(c=>c[0]),CAT_OTHER].filter(c=>ITEMS.some(i=>i.kategori===c));
+  $('#fSurv').innerHTML='<option value="">Semua pemegang</option>'+people.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  $('#fCat').innerHTML='<option value="">Semua kategori</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  $('#fSurv').value=people.includes(F.surv)?F.surv:''; $('#fCat').value=cats.includes(F.cat)?F.cat:'';
+}
+
+function renderAll(){ renderKPI(); renderSurv(); renderCats(); renderAttn(); fillSelects(); renderList(); }
+function renderFiltered(){ renderSurv(); renderCats(); renderList(); $('#fSurv').value=F.surv; $('#fCat').value=F.cat; }
+
+function setSource(kind){
+  $('#src').className='src '+(kind==='snap'?'snap':'live');
+  $('#srcText').textContent = kind==='script' ? `Live · Apps Script · ${fmtTime(loadedAt)}`
+    : kind==='live' ? `Live · CSV · ${fmtTime(loadedAt)}`
+    : `Snapshot ${SNAPSHOT_DATE} · sambungan live gagal`;
+  $('#footTime').textContent = kind==='snap' ? 'Paparan guna salinan data tersimpan' : `Auto muat semula setiap ${AUTO_REFRESH_MS/60000} minit`;
+}
+
+let toastT=null;
+function toast(msg){
+  let el=$('#toast');
+  if(!el){ el=document.createElement('div'); el.id='toast'; el.className='toast'; el.setAttribute('role','status'); document.body.appendChild(el); }
+  el.textContent=msg; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{el.hidden=true;},4000);
+}
+
+/* ===== Load ===== */
+async function load(){
+  const btn=$('#refresh'); btn.disabled=true;
+  let rows=null, nums=null, src='';
+  if(SCRIPT_URL){
+    try{
+      const res=await fetchTimeout(SCRIPT_URL+'?action=list&_='+Date.now(),{cache:'no-store'},15000);
+      const d=await res.json();
+      if(!d.ok) throw new Error(d.error);
+      rows=[d.header,...d.rows.map(r=>r.values)]; nums=[1,...d.rows.map(r=>r.row)]; src='script';
+    }catch(err){ console.warn('Apps Script gagal, cuba CSV:',err); }
+  }
+  if(!rows){
+    try{
+      const res=await fetchTimeout(CSV_URL+'&_='+Date.now(),{cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const text=await res.text();
+      if(/^\s*</.test(text)) throw new Error('Bukan CSV (sheet belum publish?)');
+      rows=parseCSV(text); nums=rows.map((_,i)=>i+1); src='live';
+    }catch(err){ console.warn('CSV gagal:',err); }
+  }
+  if(rows){
+    try{ ITEMS=buildModel(rows,nums); source=src; loadedAt=new Date(); }catch(err){ console.warn(err); rows=null; }
+  }
+  if(!rows && (!ITEMS.length || source==='snap')){
+    const snap=parseCSV($('#snapshot').textContent.trim());
+    ITEMS=buildModel(snap,snap.map((_,i)=>i+1)); source='snap'; loadedAt=new Date();
+  }
+  setSource(source); renderAll(); btn.disabled=false;
+  clearInterval(timer);
+  if(source!=='snap') timer=setInterval(()=>{ if(EDITING===null) load(); }, AUTO_REFRESH_MS);
+}
+
+/* ===== Simpan edit ===== */
+async function saveItem(it, box, btn){
+  const msg=box.querySelector('.msg');
+  const say=(t,bad)=>{ msg.textContent=t; msg.className='msg'+(bad?' bad':''); };
+  const oleh=box.querySelector('.e-oleh').value.trim();
+  const pin=box.querySelector('.e-pin').value.trim();
+  const updates=[]; let unpicked=0;
+  box.querySelectorAll('.comps li[data-i]').forEach(li=>{
+    const c=it.komponen[+li.dataset.i];
+    const st=li.querySelector('.e-st').value;
+    const ct=li.querySelector('.e-ct').value.trim();
+    if(st===statusLabel(c) && ct===c.catatan) return;
+    if(!STATUS_OPTIONS.includes(st)){ unpicked++; return; }
+    updates.push({row:c.row, detail:c.detailRaw, status:st, catatan:ct, nama:it.nama, peralatan:it.peralatan, sn:it.sn, _c:c});
+  });
+  if(unpicked) return say(`${unpicked} komponen masih "Tiada rekod". Pilih Baik atau Tidak Baik dulu.`, true);
+  if(!updates.length) return say('Tiada perubahan untuk disimpan.');
+  if(!oleh) return say('Isi nama anda dulu supaya rekod audit lengkap.', true);
+  if(!pin) return say('Isi PIN editor.', true);
+
+  btn.disabled=true; say(`Menyimpan ${updates.length} perubahan…`);
+  try{
+    const res=await fetchTimeout(SCRIPT_URL,{method:'POST',body:JSON.stringify({pin,oleh,updates:updates.map(({_c,...u})=>u)})},SAVE_TIMEOUT_MS);
+    const data=await res.json();
+    if(!data.ok) throw new Error(data.error||'Gagal menyimpan.');
+    store.set('inv_oleh',oleh); store.set('inv_pin',pin,true);
+    for(const u of updates){
+      Object.assign(u._c,{raw:u.status,status:normStatus(u.status),catatan:u.catatan,upd:data.at||fmtTime(new Date()),oleh});
+    }
+    computeItem(it); EDITING=null; OPEN.add(it.key);
+    renderAll();
+    toast(`${it.peralatan} (${it.nama}): ${updates.length} komponen dikemas kini.`);
+    setTimeout(()=>{ if(EDITING===null) load(); }, 1500);
+  }catch(err){
+    const m = err.name==='AbortError' ? 'Sambungan tamat masa. Semak dalam sheet dulu sebelum cuba lagi.'
+      : /fetch|network/i.test(err.message) ? 'Tak dapat sambung ke Apps Script. Semak SCRIPT_URL dan akses Web App (Anyone).'
+      : err.message;
+    say(m,true); btn.disabled=false;
+  }
+}
+
+/* ===== Events ===== */
+$('#q').addEventListener('input',e=>{F.q=e.target.value.trim().toLowerCase(); renderList();});
+$('#fSurv').addEventListener('change',e=>{F.surv=e.target.value; renderFiltered();});
+$('#fCat').addEventListener('change',e=>{F.cat=e.target.value; renderFiltered();});
+$('#fSt').addEventListener('change',e=>{F.st=e.target.value; renderList();});
+$('#surv').addEventListener('click',e=>{const b=e.target.closest('[data-surv]'); if(!b) return; F.surv=F.surv===b.dataset.surv?'':b.dataset.surv; renderFiltered();});
+$('#cats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]'); if(!b) return; F.cat=F.cat===b.dataset.cat?'':b.dataset.cat; renderFiltered();});
+$('#toggleAll').addEventListener('click',e=>{const o=e.target.dataset.open==='1'; e.target.dataset.open=o?'0':'1'; e.target.textContent=o?'Buka semua':'Tutup semua'; if(o) OPEN.clear(); renderList();});
+$('#refresh').addEventListener('click',()=>{ if(EDITING===null) load(); else toast('Simpan atau batal edit dulu sebelum muat semula.'); });
+
+$('#list').addEventListener('toggle',e=>{
+  const d=e.target; if(!d.classList||!d.classList.contains('item')) return;
+  const it=ITEMS[+d.dataset.id]; if(!it) return;
+  d.open?OPEN.add(it.key):OPEN.delete(it.key);
+},true);
+
+$('#list').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const box=b.closest('.item'); const it=ITEMS[+box.dataset.id]; if(!it) return;
+  switch(b.dataset.act){
+    case 'edit':
+      EDITING=it.key; OPEN.add(it.key); renderList();
+      document.querySelector(`.item[data-id="${it.id}"] .e-st`)?.focus();
+      break;
+    case 'cancel': EDITING=null; renderList(); break;
+    case 'allbaik': box.querySelectorAll('.e-st').forEach(s=>{ s.value='Baik'; }); break;
+    case 'save': saveItem(it,box,b); break;
+  }
+});
+
+load();
+</script>
